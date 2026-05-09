@@ -5,6 +5,7 @@ import CandidateProfileModal from "../../components/recruiter/CandidateProfileMo
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import { resolveJobId } from "../../lib/jobNavigation";
 
+
 const shortlistStatuses = new Set(["Shortlisted", "Interview", "Offer", "Hired"]);
 
 function normalizeText(value) {
@@ -47,17 +48,33 @@ export default function RecruiterScreening() {
     useRecruitmentData();
   const [searchParams, setSearchParams] = useSearchParams();
   const jobParam = searchParams.get("job")?.trim() ?? "";
-  const [selectedJobId, setSelectedJobId] = useState(() =>
-    resolveJobId(screeningJobs, jobParam)
-  );
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
 
+  // URL is the single source of truth. Derive the active job ID from the URL param.
+  const selectedJobId = resolveJobId(screeningJobs, jobParam);
+
+  // Keep a ref to the latest searchParams so the normalisation effect can read it
+  // without listing the object itself as a dependency (React Router creates a new
+  // reference every render, which would cause the effect to re-fire and potentially
+  // push extra history entries instead of replacing the current one).
+  const searchParamsRef = React.useRef(searchParams);
+  searchParamsRef.current = searchParams;
+
+  // Ensure the URL always reflects a valid job ID (e.g. on first load with no ?job= param).
+  // Only re-run when jobParam or selectedJobId changes — NOT when the searchParams object
+  // reference changes — to avoid creating spurious history entries.
+  useEffect(() => {
+    if (selectedJobId && jobParam !== selectedJobId) {
+      const nextParams = new URLSearchParams(searchParamsRef.current);
+      nextParams.set("job", selectedJobId);
+      setSearchParams(nextParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobParam, selectedJobId, setSearchParams]);
+
   const selectedJob = useMemo(
-    () =>
-      screeningJobs.find((job) => job.id === selectedJobId) ??
-      screeningJobs.find((job) => job.id === resolveJobId(screeningJobs, jobParam)) ??
-      null,
-    [jobParam, screeningJobs, selectedJobId]
+    () => screeningJobs.find((job) => job.id === selectedJobId) ?? null,
+    [screeningJobs, selectedJobId]
   );
 
   const candidates = useMemo(
@@ -94,23 +111,13 @@ export default function RecruiterScreening() {
     [applications, selectedCandidate]
   );
 
+  // Clear the selected candidate whenever the active job changes.
+  const prevJobIdRef = React.useRef(selectedJobId);
   useEffect(() => {
-    const nextJobId = resolveJobId(screeningJobs, jobParam);
-    if (nextJobId && nextJobId !== selectedJobId) {
-      setSelectedJobId(nextJobId);
+    if (prevJobIdRef.current !== selectedJobId) {
+      prevJobIdRef.current = selectedJobId;
+      setSelectedCandidateId(null);
     }
-  }, [jobParam, screeningJobs, selectedJobId]);
-
-  useEffect(() => {
-    if (selectedJobId && jobParam !== selectedJobId) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set("job", selectedJobId);
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [jobParam, searchParams, selectedJobId, setSearchParams]);
-
-  useEffect(() => {
-    setSelectedCandidateId(null);
   }, [selectedJobId]);
 
   useEffect(() => {
@@ -152,7 +159,11 @@ export default function RecruiterScreening() {
           <select
             id="screening-job"
             value={selectedJobId}
-            onChange={(event) => setSelectedJobId(event.target.value)}
+            onChange={(event) => {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.set("job", event.target.value);
+              setSearchParams(nextParams, { replace: true });
+            }}
             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
           >
             {screeningJobs.map((job) => (

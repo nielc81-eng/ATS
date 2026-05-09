@@ -104,20 +104,36 @@ export default function RecruiterAnalytics() {
   const { analyticsJobs, getApplicationsForJob } = useRecruitmentData();
   const [searchParams, setSearchParams] = useSearchParams();
   const jobParam = searchParams.get("job")?.trim() ?? "";
-  const [selectedJobId, setSelectedJobId] = useState(() =>
-    resolveJobId(analyticsJobs, jobParam)
-  );
   const [notice, setNotice] = useState("");
   const [exporting, setExporting] = useState(null);
   const exportTimerRef = useRef(null);
 
+  // URL is the single source of truth. Derive the active job ID from the URL param.
+  const selectedJobId = resolveJobId(analyticsJobs, jobParam);
+
+  // Keep a ref to the latest searchParams so the normalisation effect can read it
+  // without listing the object itself as a dependency (React Router creates a new
+  // reference every render, which would cause the effect to re-fire and potentially
+  // push extra history entries instead of replacing the current one).
+  const searchParamsRef = React.useRef(searchParams);
+  searchParamsRef.current = searchParams;
+
+  // Ensure the URL always reflects a valid job ID (e.g. on first load with no ?job= param).
+  // Only re-run when jobParam or selectedJobId changes — NOT when the searchParams object
+  // reference changes — to avoid creating spurious history entries.
+  useEffect(() => {
+    if (selectedJobId && jobParam !== selectedJobId) {
+      const nextParams = new URLSearchParams(searchParamsRef.current);
+      nextParams.set("job", selectedJobId);
+      setSearchParams(nextParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobParam, selectedJobId, setSearchParams]);
   const selectedJob = useMemo(
-    () =>
-      analyticsJobs.find((job) => job.id === selectedJobId) ??
-      analyticsJobs.find((job) => job.id === resolveJobId(analyticsJobs, jobParam)) ??
-      null,
-    [analyticsJobs, jobParam, selectedJobId]
+    () => analyticsJobs.find((job) => job.id === selectedJobId) ?? null,
+    [analyticsJobs, selectedJobId]
   );
+
 
   const applications = useMemo(
     () => (selectedJob ? getApplicationsForJob(selectedJob.id) : []),
@@ -149,27 +165,13 @@ export default function RecruiterAnalytics() {
   }, [applicationMetrics, selectedJob]);
 
   useEffect(() => {
-    const nextJobId = resolveJobId(analyticsJobs, jobParam);
-    if (nextJobId && nextJobId !== selectedJobId) {
-      setSelectedJobId(nextJobId);
-    }
-  }, [analyticsJobs, jobParam, selectedJobId]);
-
-  useEffect(() => {
-    if (selectedJobId && jobParam !== selectedJobId) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set("job", selectedJobId);
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [jobParam, searchParams, selectedJobId, setSearchParams]);
-
-  useEffect(() => {
     return () => {
       if (exportTimerRef.current) {
         window.clearTimeout(exportTimerRef.current);
       }
     };
   }, []);
+
 
   const handleExport = (format) => {
     if (!selectedJob) return;
@@ -229,7 +231,11 @@ export default function RecruiterAnalytics() {
             <select
               id="analytics-job"
               value={selectedJobId}
-              onChange={(event) => setSelectedJobId(event.target.value)}
+              onChange={(event) => {
+                const nextParams = new URLSearchParams(searchParams);
+                nextParams.set("job", event.target.value);
+                setSearchParams(nextParams, { replace: true });
+              }}
               className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:w-[26rem]"
             >
               {analyticsJobs.map((job) => (
