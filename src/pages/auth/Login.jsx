@@ -106,7 +106,29 @@ export default function Login() {
           </div>
         </section>
 
-        <section className="surface-card p-6 sm:p-8">
+        <section className="surface-card relative p-6 sm:p-8">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-6 flex items-center text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-2"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            Back
+          </button>
+
           <p className="section-heading">Authentication</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
             Login
