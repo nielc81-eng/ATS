@@ -7,6 +7,7 @@ import React, {
 } from "react";
 
 const STORAGE_KEY = "ai_resume_screening_session";
+const allowedRoles = new Set(["Candidate", "Recruiter", "Administrator"]);
 
 const AuthContext = createContext(null);
 
@@ -20,7 +21,7 @@ function readStoredSession() {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
 
-    if (parsed.role !== "Candidate" && parsed.role !== "Recruiter") {
+    if (!allowedRoles.has(parsed.role)) {
       return null;
     }
 
@@ -47,18 +48,20 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => readStoredSession());
 
   const login = useCallback((nextSession) => {
+    const role = allowedRoles.has(nextSession?.role)
+      ? nextSession.role
+      : "Candidate";
+
     const normalized = {
       token:
         typeof nextSession?.token === "string" && nextSession.token.trim()
           ? nextSession.token.trim()
           : `demo-${Date.now()}`,
-      role: nextSession?.role === "Recruiter" ? "Recruiter" : "Candidate",
+      role,
       name:
         typeof nextSession?.name === "string" && nextSession.name.trim()
           ? nextSession.name.trim()
-          : nextSession?.role === "Recruiter"
-            ? "Recruiter"
-            : "Candidate",
+          : role,
     };
 
     setSession(normalized);

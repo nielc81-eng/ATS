@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import BlindCandidateCard from "../../components/recruiter/BlindCandidateCard";
 import CandidateProfileModal from "../../components/recruiter/CandidateProfileModal";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import { resolveJobId } from "../../lib/jobNavigation";
 
 function getScoreStats(candidates) {
   const total = candidates.length;
@@ -18,15 +20,19 @@ function getScoreStats(candidates) {
 
 export default function RecruiterScreening() {
   const { screeningJobs, getCandidatesForJob } = useRecruitmentData();
-  const [selectedJobId, setSelectedJobId] = useState(screeningJobs[0]?.id ?? "");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const jobParam = searchParams.get("job")?.trim() ?? "";
+  const [selectedJobId, setSelectedJobId] = useState(() =>
+    resolveJobId(screeningJobs, jobParam)
+  );
   const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   const selectedJob = useMemo(
     () =>
       screeningJobs.find((job) => job.id === selectedJobId) ??
-      screeningJobs[0] ??
+      screeningJobs.find((job) => job.id === resolveJobId(screeningJobs, jobParam)) ??
       null,
-    [screeningJobs, selectedJobId]
+    [jobParam, screeningJobs, selectedJobId]
   );
 
   const candidates = useMemo(
@@ -37,10 +43,19 @@ export default function RecruiterScreening() {
   const stats = useMemo(() => getScoreStats(candidates), [candidates]);
 
   useEffect(() => {
-    if (!selectedJob && screeningJobs[0]) {
-      setSelectedJobId(screeningJobs[0].id);
+    const nextJobId = resolveJobId(screeningJobs, jobParam);
+    if (nextJobId && nextJobId !== selectedJobId) {
+      setSelectedJobId(nextJobId);
     }
-  }, [screeningJobs, selectedJob]);
+  }, [jobParam, screeningJobs, selectedJobId]);
+
+  useEffect(() => {
+    if (selectedJobId && jobParam !== selectedJobId) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("job", selectedJobId);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [jobParam, searchParams, selectedJobId, setSearchParams]);
 
   useEffect(() => {
     setSelectedCandidate(candidates[0] ?? null);
@@ -185,4 +200,3 @@ export default function RecruiterScreening() {
     </div>
   );
 }
-

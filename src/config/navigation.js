@@ -33,4 +33,31 @@ export const navigationByRole = {
       hint: "Reports and charts",
     },
   ],
+  Administrator: [
+    {
+      label: "Dashboard",
+      to: "/admin/dashboard",
+      hint: "Platform overview",
+    },
+    {
+      label: "Users & Roles",
+      to: "/admin/users",
+      hint: "Account governance",
+    },
+    {
+      label: "Audit Log",
+      to: "/admin/audit-log",
+      hint: "Activity review",
+    },
+    {
+      label: "Records",
+      to: "/admin/records",
+      hint: "Recruiter and candidate access",
+    },
+    {
+      label: "System Health",
+      to: "/admin/system-health",
+      hint: "Metrics and status",
+    },
+  ],
 };

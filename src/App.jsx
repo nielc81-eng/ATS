@@ -1,6 +1,7 @@
 import React from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, Outlet } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
+import AdminLayout from "./components/layout/AdminLayout";
 import { useAuth } from "./context/AuthContext";
 import { getRoleHomePath } from "./lib/routeHelpers";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -14,6 +15,12 @@ import RecruiterScreening from "./pages/recruiter/Screening";
 import RecruiterAnalytics from "./pages/recruiter/Analytics";
 import RecruiterDigitalFiles from "./pages/recruiter/DigitalFiles";
 import Landing from "./pages/public/Landing";
+import { RecruiterDocsInboxProvider } from "./context/RecruiterDocsInboxContext";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminUsers from "./pages/admin/Users";
+import AdminAuditLog from "./pages/admin/AuditLog";
+import AdminRecords from "./pages/admin/Records";
+import AdminSystemHealth from "./pages/admin/SystemHealth";
 
 function RouteFallback() {
   const { session, isAuthenticated } = useAuth();
@@ -36,13 +43,31 @@ export default function App() {
       </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
-          <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
-          <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
-          <Route path="/recruiter/files" element={<RecruiterDigitalFiles />} />
-          <Route path="/recruiter/screening" element={<RecruiterScreening />} />
-          <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
+        <Route
+          element={
+            <RecruiterDocsInboxProvider>
+              <Outlet />
+            </RecruiterDocsInboxProvider>
+          }
+        >
+          <Route element={<AppLayout />}>
+            <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+            <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+            <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
+            <Route path="/recruiter/files" element={<RecruiterDigitalFiles />} />
+            <Route path="/recruiter/screening" element={<RecruiterScreening />} />
+            <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
+          </Route>
+
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+            <Route path="/admin/records" element={<AdminRecords />} />
+            <Route path="/admin/system-health" element={<AdminSystemHealth />} />
+          </Route>
+
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
       </Route>
 

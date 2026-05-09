@@ -123,6 +123,8 @@ export default function Register() {
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
             Your role controls route access, menu links, and destination pages.
+            Administrator access is provisioned separately and is not available
+            through public registration.
           </div>
         </section>
 

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import TagInput from "../../components/recruiter/TagInput";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 
@@ -75,12 +76,6 @@ export default function RecruiterJobs() {
     setNiceToHaveSkills([]);
     setErrors({});
     setNotice(`Job requisition ${nextJob.id} created.`);
-  };
-
-  const handleViewCandidates = (job) => {
-    setNotice(
-      `View Candidates clicked for ${job.id} (${job.title}). Candidate list wiring will connect in Phase 5.`
-    );
   };
 
   return (
@@ -253,13 +248,20 @@ export default function RecruiterJobs() {
                     {countSkillGaps(job)}
                   </td>
                   <td className="px-6 py-4">
-                    <button
-                      type="button"
-                      onClick={() => handleViewCandidates(job)}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      View Candidates
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        to={`/recruiter/screening?job=${encodeURIComponent(job.id)}`}
+                        className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        View Candidates
+                      </Link>
+                      <Link
+                        to={`/recruiter/analytics?job=${encodeURIComponent(job.id)}`}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                      >
+                        Analytics
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -270,4 +272,3 @@ export default function RecruiterJobs() {
     </div>
   );
 }
-

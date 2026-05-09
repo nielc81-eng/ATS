@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import HorizontalBars from "../../components/recruiter/HorizontalBars";
 import MetricCard from "../../components/recruiter/MetricCard";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import { resolveJobId } from "../../lib/jobNavigation";
 import { semanticDemand } from "../../lib/recruitmentMockData";
 
 function formatPercent(value) {
@@ -78,7 +80,11 @@ function ComparisonChart({ job }) {
 
 export default function RecruiterAnalytics() {
   const { analyticsJobs } = useRecruitmentData();
-  const [selectedJobId, setSelectedJobId] = useState(analyticsJobs[0]?.id ?? "");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const jobParam = searchParams.get("job")?.trim() ?? "";
+  const [selectedJobId, setSelectedJobId] = useState(() =>
+    resolveJobId(analyticsJobs, jobParam)
+  );
   const [notice, setNotice] = useState("");
   const [exporting, setExporting] = useState(null);
   const exportTimerRef = useRef(null);
@@ -86,9 +92,9 @@ export default function RecruiterAnalytics() {
   const selectedJob = useMemo(
     () =>
       analyticsJobs.find((job) => job.id === selectedJobId) ??
-      analyticsJobs[0] ??
+      analyticsJobs.find((job) => job.id === resolveJobId(analyticsJobs, jobParam)) ??
       null,
-    [analyticsJobs, selectedJobId]
+    [analyticsJobs, jobParam, selectedJobId]
   );
 
   const summary = useMemo(() => {
@@ -115,10 +121,19 @@ export default function RecruiterAnalytics() {
   }, [selectedJob]);
 
   useEffect(() => {
-    if (!selectedJob && analyticsJobs[0]) {
-      setSelectedJobId(analyticsJobs[0].id);
+    const nextJobId = resolveJobId(analyticsJobs, jobParam);
+    if (nextJobId && nextJobId !== selectedJobId) {
+      setSelectedJobId(nextJobId);
     }
-  }, [analyticsJobs, selectedJob]);
+  }, [analyticsJobs, jobParam, selectedJobId]);
+
+  useEffect(() => {
+    if (selectedJobId && jobParam !== selectedJobId) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("job", selectedJobId);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [jobParam, searchParams, selectedJobId, setSearchParams]);
 
   useEffect(() => {
     return () => {
@@ -356,4 +371,3 @@ export default function RecruiterAnalytics() {
     </div>
   );
 }
-

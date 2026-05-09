@@ -1,9 +1,9 @@
-export const digitalFileStatuses = [
-  "Pending Review",
-  "Approved",
-  "Needs Action",
-  "Archived",
-];
+import {
+  get201StatusTone,
+  recruiter201Statuses,
+} from "./digitalFileStatusConfig";
+
+export const digitalFileStatuses = recruiter201Statuses;
 
 export const digitalFilesSeed = [
   {
@@ -134,31 +134,5 @@ export function createDigitalFile(payload = {}) {
 }
 
 export function getDigitalFileStatusTone(status) {
-  switch (status) {
-    case "Approved":
-      return {
-        pill: "bg-emerald-600 text-white",
-        card: "border-emerald-200 bg-emerald-50",
-        text: "text-emerald-700",
-      };
-    case "Needs Action":
-      return {
-        pill: "bg-amber-500 text-white",
-        card: "border-amber-200 bg-amber-50",
-        text: "text-amber-800",
-      };
-    case "Archived":
-      return {
-        pill: "bg-slate-700 text-white",
-        card: "border-slate-200 bg-slate-50",
-        text: "text-slate-700",
-      };
-    default:
-      return {
-        pill: "bg-blue-600 text-white",
-        card: "border-blue-200 bg-blue-50",
-        text: "text-blue-700",
-      };
-  }
+  return get201StatusTone(status);
 }
-

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getRoleHomePath } from "../../lib/routeHelpers";
+import { getPathRole, getRoleHomePath } from "../../lib/routeHelpers";
 import { ensureDemoAccounts, getAccountByEmail } from "../../lib/mockAuthStore";
 
 const initialForm = {
@@ -79,12 +79,7 @@ export default function Login() {
     });
 
     const rolePath = getRoleHomePath(account.role);
-    const nextPath =
-      fromPath &&
-      ((account.role === "Recruiter" && fromPath.startsWith("/recruiter")) ||
-        (account.role === "Candidate" && fromPath.startsWith("/candidate")))
-        ? fromPath
-        : rolePath;
+    const nextPath = fromPath && getPathRole(fromPath) === account.role ? fromPath : rolePath;
 
     navigate(nextPath, { replace: true });
   };
@@ -107,6 +102,7 @@ export default function Login() {
             <p className="font-semibold text-slate-900">Demo credentials</p>
             <p className="mt-2">Candidate: candidate@demo.com / Demo123!</p>
             <p>Recruiter: recruiter@demo.com / Demo123!</p>
+            <p>Administrator: admin@demo.com / Demo123!</p>
           </div>
         </section>
 
