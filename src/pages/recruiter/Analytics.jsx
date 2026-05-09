@@ -10,12 +10,34 @@ function formatPercent(value) {
   return `${value}%`;
 }
 
-function ComparisonChart({ job }) {
-  const max = Math.max(job.applicants, job.shortlisted, 1);
-  const totalWidth = job.applicants > 0 ? Math.max(10, Math.round((job.applicants / max) * 100)) : 0;
-  const shortlistWidth = job.shortlisted > 0 ? Math.max(10, Math.round((job.shortlisted / max) * 100)) : 0;
-  const conversion =
-    job.applicants > 0 ? Math.round((job.shortlisted / job.applicants) * 100) : 0;
+const SHORTLIST_STATUSES = new Set(["Shortlisted", "Interview", "Offer", "Hired"]);
+
+function getApplicationMetrics(applications) {
+  const counts = applications.reduce(
+    (acc, application) => {
+      acc.total += 1;
+      acc[application.status] = (acc[application.status] || 0) + 1;
+      if (SHORTLIST_STATUSES.has(application.status)) {
+        acc.shortlisted += 1;
+      }
+      return acc;
+    },
+    { total: 0, shortlisted: 0, Submitted: 0, Shortlisted: 0, Interview: 0, Offer: 0, Hired: 0, Rejected: 0 }
+  );
+
+  const conversion = counts.total > 0 ? Math.round((counts.shortlisted / counts.total) * 100) : 0;
+
+  return {
+    ...counts,
+    conversion,
+  };
+}
+
+function ComparisonChart({ job, totalApplicants, shortlisted }) {
+  const max = Math.max(totalApplicants, shortlisted, 1);
+  const totalWidth = totalApplicants > 0 ? Math.max(10, Math.round((totalApplicants / max) * 100)) : 0;
+  const shortlistWidth = shortlisted > 0 ? Math.max(10, Math.round((shortlisted / max) * 100)) : 0;
+  const conversion = totalApplicants > 0 ? Math.round((shortlisted / totalApplicants) * 100) : 0;
 
   return (
     <section className="surface-card p-6">
@@ -24,7 +46,7 @@ function ComparisonChart({ job }) {
         <div>
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="font-medium text-slate-900">Total Applicants</span>
-            <span className="text-slate-500">{job.applicants}</span>
+            <span className="text-slate-500">{totalApplicants}</span>
           </div>
           <div className="h-4 overflow-hidden rounded-full bg-slate-100">
             <div
@@ -37,7 +59,7 @@ function ComparisonChart({ job }) {
         <div>
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="font-medium text-slate-900">Shortlisted</span>
-            <span className="text-slate-500">{job.shortlisted}</span>
+            <span className="text-slate-500">{shortlisted}</span>
           </div>
           <div className="h-4 overflow-hidden rounded-full bg-slate-100">
             <div
@@ -79,7 +101,7 @@ function ComparisonChart({ job }) {
 }
 
 export default function RecruiterAnalytics() {
-  const { analyticsJobs } = useRecruitmentData();
+  const { analyticsJobs, getApplicationsForJob } = useRecruitmentData();
   const [searchParams, setSearchParams] = useSearchParams();
   const jobParam = searchParams.get("job")?.trim() ?? "";
   const [selectedJobId, setSelectedJobId] = useState(() =>
@@ -97,6 +119,16 @@ export default function RecruiterAnalytics() {
     [analyticsJobs, jobParam, selectedJobId]
   );
 
+  const applications = useMemo(
+    () => (selectedJob ? getApplicationsForJob(selectedJob.id) : []),
+    [getApplicationsForJob, selectedJob]
+  );
+
+  const applicationMetrics = useMemo(
+    () => getApplicationMetrics(applications),
+    [applications]
+  );
+
   const summary = useMemo(() => {
     if (!selectedJob) {
       return {
@@ -106,19 +138,15 @@ export default function RecruiterAnalytics() {
       };
     }
 
-    const conversion =
-      selectedJob.applicants > 0
-        ? Math.round((selectedJob.shortlisted / selectedJob.applicants) * 100)
-        : 0;
     const avgPipelineDays =
       selectedJob.screeningDays + selectedJob.interviewDays + selectedJob.offerDays;
 
     return {
-      conversion,
+      conversion: applicationMetrics.conversion,
       avgPipelineDays,
-      shortlistedRatio: `${selectedJob.shortlisted}/${selectedJob.applicants}`,
+      shortlistedRatio: `${applicationMetrics.shortlisted}/${applicationMetrics.total}`,
     };
-  }, [selectedJob]);
+  }, [applicationMetrics, selectedJob]);
 
   useEffect(() => {
     const nextJobId = resolveJobId(analyticsJobs, jobParam);
@@ -246,13 +274,13 @@ export default function RecruiterAnalytics() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Total Applicants"
-          value={selectedJob.applicants}
+          value={applicationMetrics.total}
           detail="Combined inbound resumes for the selected requisition."
           tone="slate"
         />
         <MetricCard
           label="Shortlisted"
-          value={selectedJob.shortlisted}
+          value={applicationMetrics.shortlisted}
           detail={`Current conversion: ${summary.shortlistedRatio}.`}
           tone="emerald"
         />
@@ -271,7 +299,11 @@ export default function RecruiterAnalytics() {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <ComparisonChart job={selectedJob} />
+        <ComparisonChart
+          job={selectedJob}
+          totalApplicants={applicationMetrics.total}
+          shortlisted={applicationMetrics.shortlisted}
+        />
 
         <section className="surface-card p-6">
           <p className="section-heading">Time-to-Fill Metrics</p>

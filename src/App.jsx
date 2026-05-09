@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Route, Routes, Outlet } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
+import JobsLayout from "./components/layout/JobsLayout";
 import AdminLayout from "./components/layout/AdminLayout";
 import { useAuth } from "./context/AuthContext";
 import { getRoleHomePath } from "./lib/routeHelpers";
@@ -14,7 +15,10 @@ import RecruiterJobs from "./pages/recruiter/Jobs";
 import RecruiterScreening from "./pages/recruiter/Screening";
 import RecruiterAnalytics from "./pages/recruiter/Analytics";
 import RecruiterDigitalFiles from "./pages/recruiter/DigitalFiles";
+import CandidateApplications from "./pages/candidate/Applications";
 import Landing from "./pages/public/Landing";
+import PublicJobsBoard from "./pages/public/Jobs";
+import PublicJobDetail from "./pages/public/JobDetail";
 import { RecruiterDocsInboxProvider } from "./context/RecruiterDocsInboxContext";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
@@ -36,6 +40,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route element={<JobsLayout />}>
+        <Route path="/jobs" element={<PublicJobsBoard />} />
+        <Route path="/jobs/:jobId" element={<PublicJobDetail />} />
+      </Route>
 
       <Route element={<PublicRoute />}>
         <Route path="/login" element={<Login />} />
@@ -52,6 +60,7 @@ export default function App() {
         >
           <Route element={<AppLayout />}>
             <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+            <Route path="/candidate/applications" element={<CandidateApplications />} />
             <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
             <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
             <Route path="/recruiter/files" element={<RecruiterDigitalFiles />} />

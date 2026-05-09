@@ -33,6 +33,7 @@ function readStoredSession() {
       token: parsed.token.trim(),
       role: parsed.role,
       name: typeof parsed.name === "string" ? parsed.name : "",
+      email: typeof parsed.email === "string" ? parsed.email.trim().toLowerCase() : "",
     };
   } catch {
     return null;
@@ -62,6 +63,10 @@ export function AuthProvider({ children }) {
         typeof nextSession?.name === "string" && nextSession.name.trim()
           ? nextSession.name.trim()
           : role,
+      email:
+        typeof nextSession?.email === "string" && nextSession.email.trim()
+          ? nextSession.email.trim().toLowerCase()
+          : "",
     };
 
     setSession(normalized);

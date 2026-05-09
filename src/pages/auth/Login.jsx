@@ -42,8 +42,11 @@ export default function Login() {
   }, []);
 
   const fromPath = useMemo(() => {
-    const candidate = location.state?.from?.pathname;
-    return typeof candidate === "string" ? candidate : null;
+    const from = location.state?.from;
+    const pathname = typeof from?.pathname === "string" ? from.pathname : "";
+    const search = typeof from?.search === "string" ? from.search : "";
+    if (!pathname) return null;
+    return `${pathname}${search}`;
   }, [location.state]);
 
   const handleChange = (event) => {
@@ -76,10 +79,16 @@ export default function Login() {
       token: `mock-${Date.now()}`,
       role: account.role,
       name: account.name,
+      email: account.email,
     });
 
     const rolePath = getRoleHomePath(account.role);
-    const nextPath = fromPath && getPathRole(fromPath) === account.role ? fromPath : rolePath;
+    const nextPath =
+      account.role === "Candidate" && fromPath?.startsWith("/jobs")
+        ? fromPath
+        : fromPath && getPathRole(fromPath) === account.role
+          ? fromPath
+          : rolePath;
 
     navigate(nextPath, { replace: true });
   };

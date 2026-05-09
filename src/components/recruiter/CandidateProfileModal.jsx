@@ -1,4 +1,42 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+
+const statusOptions = ["Submitted", "Shortlisted", "Interview", "Offer", "Hired", "Rejected"];
+
+function toDateValue(value) {
+  const parsed = Date.parse(value || "");
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const asDate = new Date(value);
+  if (Number.isNaN(asDate.getTime())) return "-";
+
+  return asDate.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getStatusTone(status) {
+  switch (status) {
+    case "Shortlisted":
+      return "bg-sky-100 text-sky-700";
+    case "Interview":
+      return "bg-indigo-100 text-indigo-700";
+    case "Offer":
+      return "bg-violet-100 text-violet-700";
+    case "Hired":
+      return "bg-emerald-100 text-emerald-700";
+    case "Rejected":
+      return "bg-rose-100 text-rose-700";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
 
 function getScoreTone(score) {
   if (score >= 80) return "bg-emerald-600 text-white";
@@ -6,7 +44,28 @@ function getScoreTone(score) {
   return "bg-slate-700 text-white";
 }
 
-export default function CandidateProfileModal({ candidate, onClose }) {
+function normalizeTimeline(timeline) {
+  return [...(Array.isArray(timeline) ? timeline : [])]
+    .map((entry) => ({
+      at: String(entry?.at || ""),
+      byRole: String(entry?.byRole || "System"),
+      toStatus: String(entry?.toStatus || "Submitted"),
+      note: String(entry?.note || ""),
+    }))
+    .sort((left, right) => toDateValue(left.at) - toDateValue(right.at));
+}
+
+export default function CandidateProfileModal({
+  candidate,
+  application,
+  onClose,
+  onSaveStatus,
+}) {
+  const [selectedStatus, setSelectedStatus] = useState("Submitted");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -18,7 +77,48 @@ export default function CandidateProfileModal({ candidate, onClose }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    setSelectedStatus(application?.status || "Submitted");
+    setNote("");
+    setError("");
+    setNotice("");
+  }, [application?.id, application?.status]);
+
+  const timeline = useMemo(
+    () => normalizeTimeline(application?.timeline),
+    [application?.timeline]
+  );
+
+  const previewItems = useMemo(
+    () => [...timeline].reverse().slice(0, 5),
+    [timeline]
+  );
+
   if (!candidate) return null;
+
+  const handleSave = async () => {
+    const trimmedNote = note.trim();
+
+    if (selectedStatus === "Rejected" && !trimmedNote) {
+      setError("A note is required when rejecting an applicant.");
+      setNotice("");
+      return;
+    }
+
+    setError("");
+    const result = onSaveStatus?.(selectedStatus, trimmedNote);
+
+    if (result && result.ok === false) {
+      setError(result.message || "Unable to update application status.");
+      setNotice("");
+      return;
+    }
+
+    setNotice("Application status updated.");
+  };
+
+  const currentStatus = application?.status || "Submitted";
+  const latestUpdated = application?.updatedOn || application?.appliedOn || "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -29,18 +129,14 @@ export default function CandidateProfileModal({ candidate, onClose }) {
         onClick={onClose}
       />
 
-      <section className="relative z-10 w-full max-w-3xl overflow-hidden rounded-[2rem] bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
+      <section className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 sm:px-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-              Blind Profile
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-              {candidate.alias}
-            </h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Blind Profile</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">{candidate.alias}</h2>
             <p className="mt-1 text-sm text-slate-600">{candidate.applicantId}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <span className={["rounded-2xl px-4 py-2 text-sm font-semibold", getScoreTone(candidate.score)].join(" ")}>
               {candidate.score}% match
             </span>
@@ -54,12 +150,10 @@ export default function CandidateProfileModal({ candidate, onClose }) {
           </div>
         </div>
 
-        <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-5">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">
-                Technical Skills
-              </p>
+              <p className="text-sm font-semibold text-slate-900">Technical Skills</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {candidate.skills.map((skill) => (
                   <span
@@ -74,9 +168,7 @@ export default function CandidateProfileModal({ candidate, onClose }) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-3xl border border-slate-200 p-5">
-                <p className="text-sm font-semibold text-slate-900">
-                  Years of Experience
-                </p>
+                <p className="text-sm font-semibold text-slate-900">Years of Experience</p>
                 <p className="mt-2 text-3xl font-semibold text-slate-950">
                   {candidate.yearsExperience}
                 </p>
@@ -90,20 +182,14 @@ export default function CandidateProfileModal({ candidate, onClose }) {
             </div>
 
             <div className="rounded-3xl border border-slate-200 p-5">
-              <p className="text-sm font-semibold text-slate-900">
-                Semantic Justification
-              </p>
+              <p className="text-sm font-semibold text-slate-900">Semantic Justification</p>
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 {candidate.justification}
               </p>
             </div>
-          </div>
 
-          <aside className="space-y-4">
             <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-900">
-                Masked PII Snapshot
-              </p>
+              <p className="text-sm font-semibold text-slate-900">Masked PII Snapshot</p>
               <dl className="mt-4 space-y-3 text-sm text-slate-600">
                 <div className="flex items-center justify-between gap-4">
                   <dt>Name</dt>
@@ -123,14 +209,112 @@ export default function CandidateProfileModal({ candidate, onClose }) {
                 </div>
               </dl>
             </div>
+          </div>
+
+          <aside className="space-y-4">
+            <div className="rounded-3xl border border-slate-200 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                    Current Status
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-slate-950">
+                    {currentStatus}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Updated {formatDateTime(latestUpdated)}
+                  </p>
+                </div>
+                <span
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-semibold",
+                    getStatusTone(currentStatus),
+                  ].join(" ")}
+                >
+                  {currentStatus}
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <label className="block text-sm font-medium text-slate-700">
+                  Update Status
+                  <select
+                    value={selectedStatus}
+                    onChange={(event) => setSelectedStatus(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block text-sm font-medium text-slate-700">
+                  Note {selectedStatus === "Rejected" ? <span className="text-rose-600">*</span> : null}
+                  <textarea
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    rows={4}
+                    placeholder="Add a recruiter note"
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+
+                {selectedStatus === "Rejected" ? (
+                  <p className="text-xs text-slate-500">A note is required before rejecting this applicant.</p>
+                ) : null}
+
+                {error ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {error}
+                  </div>
+                ) : null}
+
+                {notice ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {notice}
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Save Status
+                </button>
+              </div>
+            </div>
 
             <div className="rounded-3xl border border-slate-200 p-5">
-              <p className="text-sm font-semibold text-slate-900">Match Signals</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                {candidate.matchSignals.map((signal) => (
-                  <li key={signal}>- {signal}</li>
-                ))}
-              </ul>
+              <p className="text-sm font-semibold text-slate-900">Latest Timeline</p>
+              <div className="mt-4 space-y-3">
+                {previewItems.length > 0 ? (
+                  previewItems.map((entry, index) => (
+                    <article
+                      key={`${entry.at}-${entry.toStatus}-${index}`}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <p className="text-sm font-semibold text-slate-900">{entry.toStatus}</p>
+                        <p className="text-xs text-slate-500">{formatDateTime(entry.at)}</p>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-600">Updated by {entry.byRole}</p>
+                      {entry.note ? (
+                        <p className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                          {entry.note}
+                        </p>
+                      ) : null}
+                    </article>
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    No timeline entries yet.
+                  </p>
+                )}
+              </div>
             </div>
           </aside>
         </div>

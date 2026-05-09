@@ -5,27 +5,52 @@ import CandidateProfileModal from "../../components/recruiter/CandidateProfileMo
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import { resolveJobId } from "../../lib/jobNavigation";
 
-function getScoreStats(candidates) {
+const shortlistStatuses = new Set(["Shortlisted", "Interview", "Offer", "Hired"]);
+
+function normalizeText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function findApplicationForCandidate(candidate, applications) {
+  if (!candidate) return null;
+
+  const directMatch = applications.find((application) => application.id === candidate.applicationId);
+  if (directMatch) return directMatch;
+
+  const candidateNames = [candidate.alias, candidate.nameHint, candidate.applicantId]
+    .map(normalizeText)
+    .filter(Boolean);
+
+  return (
+    applications.find((application) =>
+      candidateNames.includes(normalizeText(application.candidateName))
+    ) || null
+  );
+}
+
+function getScreeningStats(candidates, applications) {
   const total = candidates.length;
-  const shortlisted = candidates.filter((candidate) => candidate.score >= 80).length;
+  const shortlisted = candidates.filter((candidate) => {
+    const application = findApplicationForCandidate(candidate, applications);
+    return application ? shortlistStatuses.has(application.status) : candidate.score >= 80;
+  }).length;
   const average =
     total === 0
       ? 0
-      : Math.round(
-          candidates.reduce((sum, candidate) => sum + candidate.score, 0) / total
-        );
+      : Math.round(candidates.reduce((sum, candidate) => sum + candidate.score, 0) / total);
 
   return { total, shortlisted, average };
 }
 
 export default function RecruiterScreening() {
-  const { screeningJobs, getCandidatesForJob } = useRecruitmentData();
+  const { screeningJobs, getCandidatesForJob, getApplicationsForJob, updateApplicationStatus } =
+    useRecruitmentData();
   const [searchParams, setSearchParams] = useSearchParams();
   const jobParam = searchParams.get("job")?.trim() ?? "";
   const [selectedJobId, setSelectedJobId] = useState(() =>
     resolveJobId(screeningJobs, jobParam)
   );
-  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [selectedCandidateId, setSelectedCandidateId] = useState(null);
 
   const selectedJob = useMemo(
     () =>
@@ -40,7 +65,34 @@ export default function RecruiterScreening() {
     [getCandidatesForJob, selectedJob]
   );
 
-  const stats = useMemo(() => getScoreStats(candidates), [candidates]);
+  const applications = useMemo(
+    () => (selectedJob ? getApplicationsForJob(selectedJob.id) : []),
+    [getApplicationsForJob, selectedJob]
+  );
+
+  const candidateRows = useMemo(
+    () =>
+      candidates.map((candidate) => ({
+        candidate,
+        application: findApplicationForCandidate(candidate, applications),
+      })),
+    [applications, candidates]
+  );
+
+  const stats = useMemo(() => getScreeningStats(candidates, applications), [applications, candidates]);
+
+  const selectedCandidate = useMemo(
+    () =>
+      candidateRows.find((row) => row.candidate.applicationId === selectedCandidateId)?.candidate ||
+      candidateRows.find((row) => row.candidate.applicantId === selectedCandidateId)?.candidate ||
+      null,
+    [candidateRows, selectedCandidateId]
+  );
+
+  const selectedApplication = useMemo(
+    () => findApplicationForCandidate(selectedCandidate, applications),
+    [applications, selectedCandidate]
+  );
 
   useEffect(() => {
     const nextJobId = resolveJobId(screeningJobs, jobParam);
@@ -58,8 +110,8 @@ export default function RecruiterScreening() {
   }, [jobParam, searchParams, selectedJobId, setSearchParams]);
 
   useEffect(() => {
-    setSelectedCandidate(candidates[0] ?? null);
-  }, [candidates]);
+    setSelectedCandidateId(null);
+  }, [selectedJobId]);
 
   useEffect(() => {
     document.body.style.overflow = selectedCandidate ? "hidden" : "";
@@ -71,9 +123,7 @@ export default function RecruiterScreening() {
   if (!selectedJob) {
     return (
       <section className="surface-card p-6 sm:p-8">
-        <h1 className="text-2xl font-semibold text-slate-950">
-          No jobs available for screening.
-        </h1>
+        <h1 className="text-2xl font-semibold text-slate-950">No jobs available for screening.</h1>
       </section>
     );
   }
@@ -86,8 +136,8 @@ export default function RecruiterScreening() {
           Candidate Screening
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-          Blind screening is active. Names, photos, schools, and addresses are
-          masked while semantic match scores stay visible for consistent review.
+          Blind screening is active. Names, photos, schools, and addresses are masked while
+          application status stays visible for lifecycle tracking.
         </p>
       </section>
 
@@ -113,12 +163,8 @@ export default function RecruiterScreening() {
           </select>
 
           <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-              Active Role
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-950">
-              {selectedJob.title}
-            </h2>
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Active Role</p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">{selectedJob.title}</h2>
             <p className="mt-1 text-sm text-slate-600">{selectedJob.department}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {selectedJob.focus.map((item) => (
@@ -135,28 +181,16 @@ export default function RecruiterScreening() {
 
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
           <div className="surface-card p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-              Candidates
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">
-              {stats.total}
-            </p>
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Candidates</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950">{stats.total}</p>
           </div>
           <div className="surface-card p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-              Shortlisted
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">
-              {stats.shortlisted}
-            </p>
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Shortlisted</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950">{stats.shortlisted}</p>
           </div>
           <div className="surface-card p-5">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-              Avg Match
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">
-              {stats.average}%
-            </p>
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Avg Match</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950">{stats.average}%</p>
           </div>
         </div>
       </section>
@@ -175,12 +209,15 @@ export default function RecruiterScreening() {
         </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-3">
-          {candidates.length > 0 ? (
-            candidates.map((candidate) => (
-              <BlindCandidateCard
+          {candidateRows.length > 0 ? (
+            candidateRows.map(({ candidate, application }) => (
+          <BlindCandidateCard
                 key={candidate.applicantId}
                 candidate={candidate}
-                onClick={() => setSelectedCandidate(candidate)}
+                application={application}
+                onClick={() =>
+                  setSelectedCandidateId(candidate.applicationId || candidate.applicantId)
+                }
               />
             ))
           ) : (
@@ -192,9 +229,15 @@ export default function RecruiterScreening() {
       </section>
 
       {selectedCandidate ? (
-        <CandidateProfileModal
+          <CandidateProfileModal
           candidate={selectedCandidate}
-          onClose={() => setSelectedCandidate(null)}
+          application={selectedApplication}
+          onClose={() => setSelectedCandidateId(null)}
+          onSaveStatus={(nextStatus, note) =>
+            selectedApplication
+              ? updateApplicationStatus(selectedApplication.id, nextStatus, note)
+              : { ok: false, message: "Application not found." }
+          }
         />
       ) : null}
     </div>

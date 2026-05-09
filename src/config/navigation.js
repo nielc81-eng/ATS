@@ -5,6 +5,16 @@ export const navigationByRole = {
       to: "/candidate/dashboard",
       hint: "Resume upload and status",
     },
+    {
+      label: "Browse Jobs",
+      to: "/jobs",
+      hint: "Public opportunities",
+    },
+    {
+      label: "Applications",
+      to: "/candidate/applications",
+      hint: "Track status updates",
+    },
   ],
   Recruiter: [
     {

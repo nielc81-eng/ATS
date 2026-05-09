@@ -53,8 +53,12 @@ export function createCandidateDocSubmissionEvent(payload = {}) {
   const docType = normalizeText(payload.docType, "");
   if (!docType) return null;
 
+  const eventId = createId("doc-event");
+  const submittedAt = normalizeText(payload.submittedAt, getTodayStamp());
+
   return {
-    id: createId("doc-event"),
+    id: eventId,
+    eventId,
     kind: "candidate-doc-submitted",
     candidateId: normalizeText(payload.candidateId, "candidate"),
     candidateAlias: normalizeText(payload.candidateAlias, "Candidate"),
@@ -63,7 +67,8 @@ export function createCandidateDocSubmissionEvent(payload = {}) {
       "Unknown candidate"
     ),
     docType,
-    submittedOn: normalizeText(payload.submittedOn, getTodayStamp()),
+    submittedOn: submittedAt,
+    submittedAt,
     notes: normalizeText(payload.notes, "Submitted from the candidate portal."),
     fileMeta: normalizeFileMeta(payload.fileMeta),
     fileName: normalizeText(payload.fileName, "uploaded-file"),
@@ -85,8 +90,15 @@ export function normalizeCandidateDocSubmissionEvent(event) {
   const docType = normalizeText(event?.docType, "");
   if (!docType) return null;
 
+  const eventId = normalizeText(event?.eventId, normalizeText(event?.id, createId("doc-event")));
+  const submittedAt = normalizeText(
+    event?.submittedAt,
+    normalizeText(event?.submittedOn, getTodayStamp())
+  );
+
   return {
-    id: normalizeText(event?.id, createId("doc-event")),
+    id: eventId,
+    eventId,
     kind: "candidate-doc-submitted",
     candidateId: normalizeText(event?.candidateId, "candidate"),
     candidateAlias: normalizeText(event?.candidateAlias, "Candidate"),
@@ -95,7 +107,8 @@ export function normalizeCandidateDocSubmissionEvent(event) {
       "Unknown candidate"
     ),
     docType,
-    submittedOn: normalizeText(event?.submittedOn, getTodayStamp()),
+    submittedOn: submittedAt,
+    submittedAt,
     notes: normalizeText(event?.notes, "Submitted from the candidate portal."),
     fileMeta: normalizeFileMeta(event?.fileMeta) || normalizeFileMeta({
       name: event?.fileName,

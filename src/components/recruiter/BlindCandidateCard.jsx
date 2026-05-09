@@ -27,9 +27,30 @@ function getScoreTone(score) {
   };
 }
 
-export default function BlindCandidateCard({ candidate, onClick }) {
+function getApplicationTone(status) {
+  if (status === "Shortlisted" || status === "Hired") {
+    return "bg-emerald-100 text-emerald-800";
+  }
+
+  if (status === "Interview") {
+    return "bg-blue-100 text-blue-800";
+  }
+
+  if (status === "Offer") {
+    return "bg-amber-100 text-amber-800";
+  }
+
+  if (status === "Rejected") {
+    return "bg-rose-100 text-rose-800";
+  }
+
+  return "bg-slate-100 text-slate-700";
+}
+
+export default function BlindCandidateCard({ candidate, application, onClick }) {
   const tone = getScoreTone(candidate.score);
   const isShortlisted = candidate.score >= 80;
+  const statusLabel = application?.status || (isShortlisted ? "Shortlisted" : "Under Review");
 
   return (
     <button
@@ -46,8 +67,20 @@ export default function BlindCandidateCard({ candidate, onClick }) {
           <p className="mt-1 text-sm text-slate-600">{candidate.applicantId}</p>
         </div>
 
-        <div className={["rounded-2xl px-3 py-2 text-sm font-semibold", tone.badge].join(" ")}>
-          {candidate.score}%
+        <div className="flex flex-col items-end gap-2">
+          <div className={["rounded-2xl px-3 py-2 text-sm font-semibold", tone.badge].join(" ")}>
+            {candidate.score}%
+          </div>
+          {application ? (
+            <span
+              className={[
+                "rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]",
+                getApplicationTone(application.status),
+              ].join(" ")}
+            >
+              {application.status}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -80,7 +113,7 @@ export default function BlindCandidateCard({ candidate, onClick }) {
 
       <div className="mt-4 flex items-center justify-between">
         <span className={["text-xs font-semibold uppercase tracking-[0.16em]", tone.text].join(" ")}>
-          {isShortlisted ? "Shortlisted" : "Under Review"}
+          {statusLabel}
         </span>
         <span className="text-sm font-medium text-slate-700 group-hover:text-slate-950">
           View profile

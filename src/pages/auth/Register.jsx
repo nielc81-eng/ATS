@@ -102,6 +102,7 @@ export default function Register() {
       token: `mock-${Date.now()}`,
       role,
       name: values.name.trim(),
+      email: values.email.trim().toLowerCase(),
     });
 
     navigate(getRoleHomePath(role), { replace: true });

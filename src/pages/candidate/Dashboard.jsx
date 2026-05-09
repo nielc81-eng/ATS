@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import UploadDropzone, {
   validateResumeFile,
 } from "../../components/candidate/UploadDropzone";
+import { useAuth } from "../../context/AuthContext";
 import { useCandidate201Files } from "../../context/Candidate201FilesContext";
+import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import {
   candidate201Statuses,
   get201StatusTone,
@@ -59,6 +62,20 @@ function buildMockParsedData(fileName) {
   };
 }
 
+function extractYearsExperience(experienceItems) {
+  if (!Array.isArray(experienceItems)) return 3;
+
+  const match = experienceItems
+    .map((item) => String(item || ""))
+    .join(" ")
+    .match(/(\d+)\+?\s*years?/i);
+
+  if (!match) return 3;
+
+  const value = Number.parseInt(match[1], 10);
+  return Number.isFinite(value) && value > 0 ? value : 3;
+}
+
 function formatFileSize(sizeInBytes) {
   if (!Number.isFinite(sizeInBytes) || sizeInBytes <= 0) return "N/A";
   if (sizeInBytes >= 1024 * 1024) {
@@ -76,6 +93,11 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function toDateValue(value) {
+  const parsed = Date.parse(value || "");
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 function hasAllowedExtension(fileName = "") {
@@ -327,6 +349,8 @@ function ParsedDataCard({ parsed }) {
 }
 
 export default function CandidateDashboard() {
+  const { session } = useAuth();
+  const { getApplicationsForCandidate } = useRecruitmentData();
   const [dragActive, setDragActive] = useState(false);
   const [stage, setStage] = useState("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -338,10 +362,25 @@ export default function CandidateDashboard() {
   const { docs, submitDoc, setDocStatus } = useCandidate201Files();
   const timersRef = useRef([]);
   const docTimersRef = useRef({});
+  const [lastSeenUpdates, setLastSeenUpdates] = useState("");
+  const applications = useMemo(
+    () => getApplicationsForCandidate(session?.email || ""),
+    [getApplicationsForCandidate, session?.email]
+  );
 
   const isBusy = stage === "uploading" || stage === "parsing";
 
   const currentStageLabel = useMemo(() => getStageLabel(stage), [stage]);
+  const newestApplicationUpdate = useMemo(() => {
+    return applications.reduce((latest, application) => {
+      const marker = application?.updatedOn || application?.appliedOn || "";
+      return toDateValue(marker) > toDateValue(latest) ? marker : latest;
+    }, "");
+  }, [applications]);
+
+  const hasUnreadUpdates = useMemo(() => {
+    return toDateValue(newestApplicationUpdate) > toDateValue(lastSeenUpdates);
+  }, [lastSeenUpdates, newestApplicationUpdate]);
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach((timer) => {
@@ -376,6 +415,14 @@ export default function CandidateDashboard() {
     [clearTimers, clearAllDocTimers]
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !session?.email) return;
+
+    const markerKey = `lastSeenCandidateUpdates:${session.email}`;
+    const stored = window.localStorage.getItem(markerKey) || "";
+    setLastSeenUpdates(stored);
+  }, [session?.email]);
+
   const processFile = (file) => {
     const validation = validateResumeFile(file);
     if (!validation.ok) {
@@ -403,9 +450,21 @@ export default function CandidateDashboard() {
           setStatusMessage("Parsing with AI and extracting profile signals...");
 
           const parseTimer = window.setTimeout(() => {
+            const parsed = buildMockParsedData(file.name);
             setStage("complete");
             setStatusMessage("Resume processed successfully.");
-            setParsedData(buildMockParsedData(file.name));
+            setParsedData(parsed);
+
+            if (typeof window !== "undefined" && session?.email) {
+              const profilePayload = {
+                skills: parsed.skills,
+                yearsExperience: extractYearsExperience(parsed.experience),
+              };
+              window.localStorage.setItem(
+                `candidate_resume_profile_v1:${session.email}`,
+                JSON.stringify(profilePayload)
+              );
+            }
           }, 1800);
 
           timersRef.current.push(parseTimer);
@@ -624,6 +683,23 @@ export default function CandidateDashboard() {
           and show extracted skills, experience, and education for review.
         </p>
       </section>
+
+      {hasUnreadUpdates ? (
+        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+          <p className="text-sm font-semibold uppercase tracking-[0.14em]">Status Updates</p>
+          <p className="mt-2 text-sm">
+            You have new application updates waiting in your tracker.
+          </p>
+          <div className="mt-4">
+            <Link
+              to="/candidate/applications"
+              className="inline-flex rounded-2xl bg-amber-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-800"
+            >
+              View updates
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       <UploadDropzone
         dragActive={dragActive}
