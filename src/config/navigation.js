@@ -50,19 +50,39 @@ export const navigationByRole = {
       hint: "Platform overview",
     },
     {
-      label: "Users & Roles",
+      label: "User Management",
       to: "/admin/users",
       hint: "Account governance",
     },
     {
-      label: "Audit Log",
+      label: "Application Audit Trail",
       to: "/admin/audit-log",
-      hint: "Activity review",
+      hint: "Application lifecycle events",
     },
     {
-      label: "Records",
-      to: "/admin/records",
-      hint: "Recruiter and candidate access",
+      label: "Recruiter Activity",
+      to: "/admin/recruiter-activity",
+      hint: "Hiring workflow oversight",
+    },
+    {
+      label: "Candidate Activity",
+      to: "/admin/candidate-activity",
+      hint: "Candidate-side progress",
+    },
+    {
+      label: "Digital 201 Files Review",
+      to: "/admin/files-review",
+      hint: "File status and review queue",
+    },
+    {
+      label: "Talent Pool",
+      to: "/admin/talent-pool",
+      hint: "Reusable workforce bench",
+    },
+    {
+      label: "Deployment Board",
+      to: "/admin/deployment-board",
+      hint: "Assignments and coverage",
     },
     {
       label: "System Health",

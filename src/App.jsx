@@ -23,6 +23,11 @@ import { RecruiterDocsInboxProvider } from "./context/RecruiterDocsInboxContext"
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
 import AdminAuditLog from "./pages/admin/AuditLog";
+import AdminRecruiterActivity from "./pages/admin/RecruiterActivity";
+import AdminCandidateActivity from "./pages/admin/CandidateActivity";
+import AdminFilesReview from "./pages/admin/FilesReview";
+import AdminTalentPool from "./pages/admin/TalentPool";
+import AdminDeploymentBoard from "./pages/admin/DeploymentBoard";
 import AdminRecords from "./pages/admin/Records";
 import AdminSystemHealth from "./pages/admin/SystemHealth";
 
@@ -72,6 +77,11 @@ export default function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+            <Route path="/admin/recruiter-activity" element={<AdminRecruiterActivity />} />
+            <Route path="/admin/candidate-activity" element={<AdminCandidateActivity />} />
+            <Route path="/admin/files-review" element={<AdminFilesReview />} />
+            <Route path="/admin/talent-pool" element={<AdminTalentPool />} />
+            <Route path="/admin/deployment-board" element={<AdminDeploymentBoard />} />
             <Route path="/admin/records" element={<AdminRecords />} />
             <Route path="/admin/system-health" element={<AdminSystemHealth />} />
           </Route>

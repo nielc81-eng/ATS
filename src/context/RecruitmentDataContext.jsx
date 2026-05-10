@@ -6,6 +6,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { useAuth } from "./AuthContext";
+import { recordAdminAuditEvent } from "../lib/adminMockData";
 import {
   cloneRecruitmentJob,
   createRecruitmentJob,
@@ -437,6 +439,7 @@ function buildScreeningCandidate(job, applicationId, name, resumeProfile) {
 }
 
 export function RecruitmentDataProvider({ children }) {
+  const { session } = useAuth();
   const [jobs, setJobs] = useState(() => readStoredJobs());
   const [applicationsByEmail, setApplicationsByEmail] = useState(() =>
     readStoredApplications(jobs)
@@ -627,9 +630,24 @@ export function RecruitmentDataProvider({ children }) {
         ),
       }));
 
+      const actor = session?.name || session?.email || "Recruiter";
+      const detailParts = [
+        `${updatedApplication.candidateName} (${updatedApplication.id}) moved from ${location.application.status} to ${normalizedStatus}.`,
+      ];
+      if (trimmedNote) {
+        detailParts.push(`Note: ${trimmedNote}`);
+      }
+      recordAdminAuditEvent({
+        actor,
+        action: "Updated application status",
+        target: updatedApplication.id,
+        category: "applications",
+        detail: detailParts.join(" "),
+      });
+
       return { ok: true, application: updatedApplication };
     },
-    [applicationsByEmail]
+    [applicationsByEmail, session]
   );
 
   const withdrawApplication = useCallback(

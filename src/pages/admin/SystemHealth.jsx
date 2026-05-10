@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { useCandidate201Files } from "../../context/Candidate201FilesContext";
+import { useAdminWorkforce } from "../../context/AdminWorkforceContext";
 import { useDigitalFiles } from "../../context/DigitalFilesContext";
 import { useRecruiterDocsInbox } from "../../context/RecruiterDocsInboxContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
@@ -11,6 +12,7 @@ function formatNumber(value) {
 
 export default function AdminSystemHealth() {
   const { users, auditEvents } = useAdminData();
+  const { talentPool, assignments } = useAdminWorkforce();
   const { jobs } = useRecruitmentData();
   const { files } = useDigitalFiles();
   const { items } = useRecruiterDocsInbox();
@@ -25,8 +27,10 @@ export default function AdminSystemHealth() {
       inbox: items.length,
       pending: items.filter((item) => item.status === "Submitted").length,
       docs: docs.length,
+      pool: talentPool.length,
+      deployments: assignments.filter((assignment) => assignment.status === "Active").length,
     }),
-    [users, auditEvents, jobs, files, items, docs]
+    [users, auditEvents, jobs, files, items, docs, talentPool, assignments]
   );
 
   const healthChecks = [
@@ -35,6 +39,8 @@ export default function AdminSystemHealth() {
     { label: "Recruitment dataset", value: "Loaded", tone: "emerald" },
     { label: "Candidate inbox sync", value: "Active", tone: "amber" },
     { label: "File vault mock data", value: "Loaded", tone: "emerald" },
+    { label: "Workforce module", value: "Loaded", tone: "emerald" },
+    { label: "Deployment sync", value: "Active", tone: "cyan" },
     { label: "Refresh survival", value: "Verified by localStorage", tone: "cyan" },
   ];
 
@@ -57,7 +63,7 @@ export default function AdminSystemHealth() {
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {[
           { label: "Users", value: stats.users },
           { label: "Audit events", value: stats.audits },
@@ -66,6 +72,8 @@ export default function AdminSystemHealth() {
           { label: "Inbox items", value: stats.inbox },
           { label: "Pending reviews", value: stats.pending },
           { label: "File records", value: stats.files },
+          { label: "Talent pool", value: stats.pool },
+          { label: "Deployments", value: stats.deployments },
         ].map((item) => (
           <article key={item.label} className="surface-card p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
