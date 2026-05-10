@@ -1,4 +1,10 @@
-import { ensureDemoAccounts, getAccounts, updateAccountRole } from "./mockAuthStore";
+import {
+  archiveAccount,
+  ensureDemoAccounts,
+  getAccounts,
+  restoreAccount,
+  updateAccountRole,
+} from "./mockAuthStore";
 
 export const ADMIN_AUDIT_STORAGE_KEY = "ai_resume_screening_admin_audit_events_v1";
 
@@ -135,6 +141,7 @@ export function getAdminUsers() {
       ...account,
       permissions: resolvePermissions(account.role),
       locked: account.role === "Administrator" && normalizeEmail(account.email) === "admin@demo.com",
+      isArchived: account.status === "Archived",
       scope:
         account.role === "Administrator"
           ? "Platform-wide access"
@@ -183,6 +190,55 @@ export function updateAdminUserRole(email, role, actor = "Administrator") {
     target: normalizeEmail(email),
     category: "users",
     detail: `${updatedAccount?.name || normalizeEmail(email)} is now ${role}.`,
+  });
+
+  return result;
+}
+
+export function archiveAdminUser(email, options = {}) {
+  ensureAdminMockData();
+  const actor = String(options.actor || "Administrator").trim() || "Administrator";
+  const archiveReason = String(options.archiveReason || "").trim();
+  const result = archiveAccount(email, {
+    archivedBy: actor,
+    archiveReason,
+  });
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const updatedAccount = result.account;
+  recordAdminAuditEvent({
+    actor,
+    action: "Archived user account",
+    target: normalizeEmail(email),
+    category: "users",
+    detail:
+      archiveReason
+        ? `${updatedAccount?.name || normalizeEmail(email)} archived. Reason: ${archiveReason}`
+        : `${updatedAccount?.name || normalizeEmail(email)} archived.`,
+  });
+
+  return result;
+}
+
+export function restoreAdminUser(email, actor = "Administrator") {
+  ensureAdminMockData();
+  const normalizedActor = String(actor || "Administrator").trim() || "Administrator";
+  const result = restoreAccount(email);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const updatedAccount = result.account;
+  recordAdminAuditEvent({
+    actor: normalizedActor,
+    action: "Restored user account",
+    target: normalizeEmail(email),
+    category: "users",
+    detail: `${updatedAccount?.name || normalizeEmail(email)} restored to active access.`,
   });
 
   return result;

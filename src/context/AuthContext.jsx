@@ -2,9 +2,16 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
+import {
+  ACCOUNTS_STORAGE_KEY,
+  ensureDemoAccounts,
+  getAccountByEmail,
+  getAccounts,
+} from "../lib/mockAuthStore";
 
 const STORAGE_KEY = "ai_resume_screening_session";
 const allowedRoles = new Set(["Candidate", "Recruiter", "Administrator"]);
@@ -45,6 +52,24 @@ function persistSession(session) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }
 
+function resolveSessionAccount(session) {
+  const email = String(session?.email || "").trim().toLowerCase();
+  if (email) {
+    return getAccountByEmail(email);
+  }
+
+  const name = String(session?.name || "").trim().toLowerCase();
+  if (!name) return null;
+
+  const matches = getAccounts().filter(
+    (account) =>
+      account.role === session?.role &&
+      String(account.name || "").trim().toLowerCase() === name
+  );
+
+  return matches.length === 1 ? matches[0] : null;
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => readStoredSession());
 
@@ -79,6 +104,40 @@ export function AuthProvider({ children }) {
       window.localStorage.removeItem(STORAGE_KEY);
     }
   }, []);
+
+  useEffect(() => {
+    ensureDemoAccounts();
+  }, []);
+
+  useEffect(() => {
+    if (!session?.token) return undefined;
+
+    const syncSessionStatus = () => {
+      const account = resolveSessionAccount(session);
+      const isArchived = account?.status === "Archived";
+      const roleMismatch = account?.role && account.role !== session.role;
+
+      if (!account || isArchived || roleMismatch) {
+        logout();
+      }
+    };
+
+    syncSessionStatus();
+
+    const handleStorage = (event) => {
+      if (event.key === ACCOUNTS_STORAGE_KEY) {
+        syncSessionStatus();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    const timer = window.setInterval(syncSessionStatus, 3000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.clearInterval(timer);
+    };
+  }, [session, logout]);
 
   const value = useMemo(
     () => ({

@@ -75,6 +75,16 @@ export default function Login() {
       return;
     }
 
+    if (account.status === "Archived") {
+      setStatus({
+        type: "error",
+        message:
+          "This account has been archived by an administrator. Please contact support to restore access.",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     login({
       token: `mock-${Date.now()}`,
       role: account.role,

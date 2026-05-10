@@ -8,10 +8,12 @@ import React, {
 } from "react";
 import {
   ADMIN_AUDIT_STORAGE_KEY,
+  archiveAdminUser,
   ensureAdminMockData,
   getAdminAuditEvents,
   getAdminUsers,
   recordAdminAuditEvent,
+  restoreAdminUser,
   updateAdminUserRole,
 } from "../lib/adminMockData";
 import { ACCOUNTS_STORAGE_KEY } from "../lib/mockAuthStore";
@@ -56,6 +58,26 @@ export function AdminDataProvider({ children }) {
     [sync]
   );
 
+  const archiveUser = useCallback(
+    (email, payload = {}) => {
+      const result = archiveAdminUser(email, payload);
+      if (!result.ok) return result;
+      sync();
+      return result;
+    },
+    [sync]
+  );
+
+  const restoreUser = useCallback(
+    (email, actor = "Administrator") => {
+      const result = restoreAdminUser(email, actor);
+      if (!result.ok) return result;
+      sync();
+      return result;
+    },
+    [sync]
+  );
+
   const addAuditEvent = useCallback(
     (payload) => {
       const entry = recordAdminAuditEvent(payload);
@@ -70,10 +92,12 @@ export function AdminDataProvider({ children }) {
       users,
       auditEvents,
       updateUserRole,
+      archiveUser,
+      restoreUser,
       addAuditEvent,
       refreshAdminData: sync,
     }),
-    [users, auditEvents, updateUserRole, addAuditEvent, sync]
+    [users, auditEvents, updateUserRole, archiveUser, restoreUser, addAuditEvent, sync]
   );
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;

@@ -1,5 +1,7 @@
 export const ACCOUNTS_STORAGE_KEY = "ai_resume_screening_accounts";
 const allowedRoles = new Set(["Candidate", "Recruiter", "Administrator"]);
+const allowedStatuses = new Set(["Active", "Archived"]);
+const lockedAdminEmail = "admin@demo.com";
 
 const demoAccounts = [
   {
@@ -7,18 +9,30 @@ const demoAccounts = [
     email: "candidate@demo.com",
     password: "Demo123!",
     role: "Candidate",
+    status: "Active",
+    archivedAt: "",
+    archivedBy: "",
+    archiveReason: "",
   },
   {
     name: "Demo Recruiter",
     email: "recruiter@demo.com",
     password: "Demo123!",
     role: "Recruiter",
+    status: "Active",
+    archivedAt: "",
+    archivedBy: "",
+    archiveReason: "",
   },
   {
     name: "Platform Administrator",
     email: "admin@demo.com",
     password: "Demo123!",
     role: "Administrator",
+    status: "Active",
+    archivedAt: "",
+    archivedBy: "",
+    archiveReason: "",
   },
 ];
 
@@ -40,16 +54,62 @@ function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function normalizeStatus(value) {
+  return allowedStatuses.has(value) ? value : "Active";
+}
+
+function normalizeAccount(account) {
+  if (!account || typeof account !== "object") return null;
+
+  const email = normalizeEmail(account.email);
+  const password = typeof account.password === "string" ? account.password : "";
+  const role = allowedRoles.has(account.role) ? account.role : "Candidate";
+  const status = normalizeStatus(account.status);
+
+  if (!email || !password) return null;
+
+  return {
+    name: String(account.name || "").trim(),
+    email,
+    password,
+    role,
+    status,
+    archivedAt:
+      status === "Archived" && typeof account.archivedAt === "string"
+        ? account.archivedAt
+        : "",
+    archivedBy:
+      status === "Archived" && typeof account.archivedBy === "string"
+        ? account.archivedBy
+        : "",
+    archiveReason:
+      status === "Archived" && typeof account.archiveReason === "string"
+        ? account.archiveReason
+        : "",
+  };
+}
+
 function mergeDemoAccounts(accounts) {
-  const next = [...accounts];
+  const normalizedAccounts = accounts.map(normalizeAccount).filter(Boolean);
+  const next = [...normalizedAccounts];
 
   demoAccounts.forEach((demoAccount) => {
-    const email = normalizeEmail(demoAccount.email);
-    const exists = next.some((account) => normalizeEmail(account.email) === email);
+    const normalizedDemo = normalizeAccount(demoAccount);
+    if (!normalizedDemo) return;
 
-    if (!exists) {
-      next.push(demoAccount);
+    const email = normalizeEmail(demoAccount.email);
+    const index = next.findIndex((account) => normalizeEmail(account.email) === email);
+
+    if (index === -1) {
+      next.push(normalizedDemo);
+      return;
     }
+
+    next[index] = {
+      ...next[index],
+      role: next[index].role || normalizedDemo.role,
+      status: next[index].status || "Active",
+    };
   });
 
   return next;
@@ -72,13 +132,11 @@ export function ensureDemoAccounts() {
 }
 
 export function getAccounts() {
-  return readRawAccounts().filter(
-    (account) =>
-      account &&
-      typeof account.email === "string" &&
-      typeof account.password === "string" &&
-      allowedRoles.has(account.role)
-  );
+  return readRawAccounts().map(normalizeAccount).filter(Boolean);
+}
+
+export function getActiveAccounts() {
+  return getAccounts().filter((account) => account.status !== "Archived");
 }
 
 export function getAccountByEmail(email) {
@@ -120,7 +178,19 @@ export function createAccount(payload) {
     };
   }
 
-  const next = [...accounts, { name, email, password, role }];
+  const next = [
+    ...accounts,
+    {
+      name,
+      email,
+      password,
+      role,
+      status: "Active",
+      archivedAt: "",
+      archivedBy: "",
+      archiveReason: "",
+    },
+  ];
   writeRawAccounts(next);
 
   return {
@@ -167,4 +237,70 @@ export function updateAccountRole(email, role) {
     ok: true,
     account: updated ? { ...updated } : null,
   };
+}
+
+function updateAccountStatus(email, status, options = {}) {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedEmail) {
+    return { ok: false, message: "A valid account email is required." };
+  }
+
+  if (!allowedStatuses.has(status)) {
+    return { ok: false, message: "Unsupported account status update requested." };
+  }
+
+  if (normalizedEmail === lockedAdminEmail && status === "Archived") {
+    return { ok: false, message: "The seeded administrator account cannot be archived." };
+  }
+
+  const accounts = readRawAccounts().map(normalizeAccount).filter(Boolean);
+  let found = false;
+
+  const next = accounts.map((account) => {
+    if (normalizeEmail(account.email) !== normalizedEmail) {
+      return account;
+    }
+
+    found = true;
+
+    if (status === "Archived") {
+      return {
+        ...account,
+        status: "Archived",
+        archivedAt: new Date().toISOString(),
+        archivedBy: String(options.archivedBy || "Administrator").trim(),
+        archiveReason: String(options.archiveReason || "").trim(),
+      };
+    }
+
+    return {
+      ...account,
+      status: "Active",
+      archivedAt: "",
+      archivedBy: "",
+      archiveReason: "",
+    };
+  });
+
+  if (!found) {
+    return { ok: false, message: "Account not found." };
+  }
+
+  writeRawAccounts(next);
+
+  const updated = next.find((account) => normalizeEmail(account.email) === normalizedEmail);
+
+  return {
+    ok: true,
+    account: updated ? { ...updated } : null,
+  };
+}
+
+export function archiveAccount(email, options = {}) {
+  return updateAccountStatus(email, "Archived", options);
+}
+
+export function restoreAccount(email) {
+  return updateAccountStatus(email, "Active");
 }
