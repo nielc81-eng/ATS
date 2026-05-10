@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --configLoader native",
+    "test": "node --test tests/auth-navigation.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

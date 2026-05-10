@@ -126,10 +126,10 @@ export default function Login() {
         </section>
 
         <section className="surface-card relative p-6 sm:p-8">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="mb-6 flex items-center text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          <Link
+            to="/"
+            className="mb-6 inline-flex items-center gap-2 rounded-2xl px-2 py-1 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label="Back to landing page"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -141,12 +141,12 @@ export default function Login() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="mr-2"
+              className="shrink-0"
             >
               <path d="m15 18-6-6 6-6" />
             </svg>
-            Back
-          </button>
+            <span>Back</span>
+          </Link>
 
           <p className="section-heading">Authentication</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
