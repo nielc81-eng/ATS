@@ -10,11 +10,14 @@ import PublicRoute from "./routes/PublicRoute";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import CandidateDashboard from "./pages/candidate/Dashboard";
+import CandidateEditProfile from "./pages/candidate/EditProfile";
 import RecruiterDashboard from "./pages/recruiter/Dashboard";
 import RecruiterJobs from "./pages/recruiter/Jobs";
 import RecruiterScreening from "./pages/recruiter/Screening";
 import RecruiterAnalytics from "./pages/recruiter/Analytics";
 import RecruiterDigitalFiles from "./pages/recruiter/DigitalFiles";
+import RecruiterTalentPool from "./pages/recruiter/TalentPool";
+import RecruiterDeployment from "./pages/recruiter/Deployment";
 import CandidateApplications from "./pages/candidate/Applications";
 import Landing from "./pages/public/Landing";
 import PublicJobsBoard from "./pages/public/Jobs";
@@ -27,6 +30,8 @@ import AdminRecruiterActivity from "./pages/admin/RecruiterActivity";
 import AdminCandidateActivity from "./pages/admin/CandidateActivity";
 import AdminFilesReview from "./pages/admin/FilesReview";
 import AdminTalentPool from "./pages/admin/TalentPool";
+import AdminTalentPoolAnalytics from "./pages/admin/TalentPoolAnalytics";
+import AdminDeploymentApprovals from "./pages/admin/DeploymentApprovals";
 import AdminDeploymentBoard from "./pages/admin/DeploymentBoard";
 import AdminRecords from "./pages/admin/Records";
 import AdminSystemHealth from "./pages/admin/SystemHealth";
@@ -77,13 +82,16 @@ export default function App() {
             }
           >
             <Route element={<AppLayout />}>
-              <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
-              <Route path="/candidate/applications" element={<CandidateApplications />} />
+            <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+            <Route path="/candidate/profile/edit" element={<CandidateEditProfile />} />
+            <Route path="/candidate/applications" element={<CandidateApplications />} />
               <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
               <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
               <Route path="/recruiter/files" element={<RecruiterDigitalFiles />} />
               <Route path="/recruiter/screening" element={<RecruiterScreening />} />
               <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
+              <Route path="/recruiter/talent-pool" element={<RecruiterTalentPool />} />
+              <Route path="/recruiter/deployment" element={<RecruiterDeployment />} />
             </Route>
 
             <Route element={<AdminLayout />}>
@@ -94,6 +102,11 @@ export default function App() {
               <Route path="/admin/candidate-activity" element={<AdminCandidateActivity />} />
               <Route path="/admin/files-review" element={<AdminFilesReview />} />
               <Route path="/admin/talent-pool" element={<AdminTalentPool />} />
+              <Route
+                path="/admin/talent-pool/analytics"
+                element={<AdminTalentPoolAnalytics />}
+              />
+              <Route path="/admin/deployment-approvals" element={<AdminDeploymentApprovals />} />
               <Route path="/admin/deployment-board" element={<AdminDeploymentBoard />} />
               <Route path="/admin/records" element={<AdminRecords />} />
               <Route path="/admin/system-health" element={<AdminSystemHealth />} />

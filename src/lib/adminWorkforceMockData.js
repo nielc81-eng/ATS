@@ -3,10 +3,20 @@ import { recordAdminAuditEvent } from "./adminMockData";
 export const TALENT_POOL_STORAGE_KEY = "ai_resume_screening_admin_talent_pool_v1";
 export const DEPLOYMENT_ASSIGNMENTS_STORAGE_KEY =
   "ai_resume_screening_admin_deployment_assignments_v1";
+export const DEPLOYMENT_REQUESTS_STORAGE_KEY =
+  "ai_resume_screening_admin_deployment_requests_v1";
 
 export const talentPoolStatuses = ["Ready", "On Hold", "Deployed", "Archived"];
 export const talentAvailabilityStates = ["Available", "Limited", "Unavailable"];
 export const deploymentTargetTypes = ["Job", "Department", "Project"];
+export const deploymentRequestStatuses = [
+  "Draft",
+  "Pending Approval",
+  "Approved",
+  "Rejected",
+  "Assigned",
+];
+export const deploymentUrgencyLevels = ["Low", "Medium", "High", "Critical"];
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -57,6 +67,10 @@ function normalizeHistoryEntry(entry = {}) {
     action: normalizeText(entry.action) || "Updated",
     detail: normalizeText(entry.detail),
   };
+}
+
+function normalizeRequestHistoryEntry(entry = {}) {
+  return normalizeHistoryEntry(entry);
 }
 
 function normalizeTalentRecord(raw = {}) {
@@ -115,6 +129,10 @@ function normalizeAssignment(raw = {}) {
   return {
     id: normalizeText(raw.id) || createId("DP"),
     talentId: normalizeText(raw.talentId) || "",
+    requestId: normalizeText(raw.requestId) || "",
+    requestStatus: normalizeText(raw.requestStatus) || "",
+    requester: normalizeText(raw.requester) || "",
+    requesterEmail: normalizeText(raw.requesterEmail) || "",
     targetType: deploymentTargetTypes.includes(raw.targetType) ? raw.targetType : "Project",
     targetId: normalizeText(raw.targetId) || "",
     targetName: normalizeText(raw.targetName) || "Untitled Target",
@@ -125,6 +143,9 @@ function normalizeAssignment(raw = {}) {
     assignedAt: normalizeIsoDate(raw.assignedAt),
     assignedBy: normalizeText(raw.assignedBy) || "Administrator",
     updatedAt: normalizeIsoDate(raw.updatedAt, normalizeIsoDate(raw.assignedAt)),
+    approvedAt: normalizeText(raw.approvedAt) ? normalizeIsoDate(raw.approvedAt) : "",
+    approvedBy: normalizeText(raw.approvedBy) || "",
+    approvalNotes: normalizeText(raw.approvalNotes) || "",
     releasedAt: normalizeText(raw.releasedAt) ? normalizeIsoDate(raw.releasedAt) : "",
     releasedBy: normalizeText(raw.releasedBy) || "",
     archivedAt: normalizeText(raw.archivedAt) ? normalizeIsoDate(raw.archivedAt) : "",
@@ -132,6 +153,54 @@ function normalizeAssignment(raw = {}) {
     history: Array.isArray(raw.history)
       ? raw.history.map(normalizeHistoryEntry)
       : [],
+  };
+}
+
+function normalizeDeploymentRequest(raw = {}) {
+  const status = deploymentRequestStatuses.includes(raw.status) ? raw.status : "Draft";
+  const targetType = deploymentTargetTypes.includes(raw.targetType) ? raw.targetType : "Project";
+  const history = Array.isArray(raw.history) ? raw.history.map(normalizeRequestHistoryEntry) : [];
+
+  return {
+    id: normalizeText(raw.id) || createId("DR"),
+    talentId: normalizeText(raw.talentId) || "",
+    talentName: normalizeText(raw.talentName) || "Candidate",
+    talentEmail: normalizeText(raw.talentEmail) || "",
+    talentSkills: Array.isArray(raw.talentSkills)
+      ? raw.talentSkills.map(normalizeText).filter(Boolean)
+      : [],
+    sourceJobId: normalizeText(raw.sourceJobId) || "",
+    sourceJobTitle: normalizeText(raw.sourceJobTitle) || "",
+    sourceDepartment: normalizeText(raw.sourceDepartment) || "",
+    targetType,
+    targetId: normalizeText(raw.targetId) || "",
+    targetName: normalizeText(raw.targetName) || "Unspecified target",
+    department: normalizeText(raw.department) || "",
+    location: normalizeText(raw.location) || "",
+    urgency: deploymentUrgencyLevels.includes(raw.urgency) ? raw.urgency : "Medium",
+    startDate: normalizeText(raw.startDate) || "",
+    endDate: normalizeText(raw.endDate) || "",
+    justification: normalizeText(raw.justification) || "",
+    requester: normalizeText(raw.requester) || "Recruiter",
+    requesterEmail: normalizeText(raw.requesterEmail).toLowerCase() || "",
+    requesterRole: normalizeText(raw.requesterRole) || "Recruiter",
+    status,
+    createdAt: normalizeIsoDate(raw.createdAt),
+    updatedAt: normalizeIsoDate(raw.updatedAt, normalizeIsoDate(raw.createdAt)),
+    submittedAt: normalizeText(raw.submittedAt) ? normalizeIsoDate(raw.submittedAt) : "",
+    submittedBy: normalizeText(raw.submittedBy) || "",
+    approvedAt: normalizeText(raw.approvedAt) ? normalizeIsoDate(raw.approvedAt) : "",
+    approvedBy: normalizeText(raw.approvedBy) || "",
+    approvalNotes: normalizeText(raw.approvalNotes) || "",
+    rejectedAt: normalizeText(raw.rejectedAt) ? normalizeIsoDate(raw.rejectedAt) : "",
+    rejectedBy: normalizeText(raw.rejectedBy) || "",
+    rejectionReason: normalizeText(raw.rejectionReason) || "",
+    assignmentId: normalizeText(raw.assignmentId) || "",
+    assignmentStatus: normalizeText(raw.assignmentStatus) || "",
+    archivedAt: normalizeText(raw.archivedAt) ? normalizeIsoDate(raw.archivedAt) : "",
+    archivedBy: normalizeText(raw.archivedBy) || "",
+    archiveReason: normalizeText(raw.archiveReason) || "",
+    history,
   };
 }
 
@@ -155,6 +224,18 @@ function readAssignments() {
 
 function writeAssignments(records) {
   writeJsonArray(DEPLOYMENT_ASSIGNMENTS_STORAGE_KEY, records);
+}
+
+function readRequests() {
+  return sortByUpdatedAt(
+    readJsonArray(DEPLOYMENT_REQUESTS_STORAGE_KEY)
+      .map(normalizeDeploymentRequest)
+      .filter((record) => record.id && record.talentId)
+  );
+}
+
+function writeRequests(records) {
+  writeJsonArray(DEPLOYMENT_REQUESTS_STORAGE_KEY, records);
 }
 
 function appendTalentHistory(record, actor, action, detail) {
@@ -188,8 +269,29 @@ function appendAssignmentHistory(assignment, actor, action, detail) {
   };
 }
 
+function appendRequestHistory(request, actor, action, detail) {
+  return {
+    ...request,
+    history: [
+      normalizeRequestHistoryEntry({
+        at: new Date().toISOString(),
+        by: actor,
+        action,
+        detail,
+      }),
+      ...request.history,
+    ],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function findTalentRecord(records, talentId) {
   const normalizedId = normalizeText(talentId);
+  return records.find((record) => record.id === normalizedId) ?? null;
+}
+
+function findRequestRecord(records, requestId) {
+  const normalizedId = normalizeText(requestId);
   return records.find((record) => record.id === normalizedId) ?? null;
 }
 
@@ -228,11 +330,313 @@ export function getDeploymentAssignments() {
   return readAssignments();
 }
 
+export function getDeploymentRequests() {
+  return readRequests();
+}
+
 export function getTalentAssignmentsForTalent(talentId) {
   const normalizedId = normalizeText(talentId);
   if (!normalizedId) return [];
 
   return readAssignments().filter((assignment) => assignment.talentId === normalizedId);
+}
+
+export function getDeploymentRequestsForTalent(talentId) {
+  const normalizedId = normalizeText(talentId);
+  if (!normalizedId) return [];
+
+  return readRequests().filter((request) => request.talentId === normalizedId);
+}
+
+export function getDeploymentRequestsForRequester(requesterEmail) {
+  const normalizedEmail = normalizeText(requesterEmail).toLowerCase();
+  if (!normalizedEmail) return [];
+
+  return readRequests().filter(
+    (request) => normalizeText(request.requesterEmail).toLowerCase() === normalizedEmail
+  );
+}
+
+export function getDeploymentRequestById(requestId) {
+  return findRequestRecord(readRequests(), requestId);
+}
+
+export function createDeploymentRequest(talentId, payload = {}, actor = "Recruiter") {
+  const pool = readTalentPool();
+  const requests = readRequests();
+  const record = findTalentRecord(pool, talentId);
+
+  if (!record) {
+    return { ok: false, message: "Talent record not found." };
+  }
+
+  const now = new Date().toISOString();
+  const request = normalizeDeploymentRequest({
+    id: createId("DR"),
+    talentId: record.id,
+    talentName: record.candidateName,
+    talentEmail: record.candidateEmail,
+    talentSkills: record.skills,
+    sourceJobId: record.sourceJobId,
+    sourceJobTitle: record.sourceJobTitle,
+    sourceDepartment: record.sourceDepartment,
+    targetType: payload.targetType,
+    targetId: normalizeText(payload.targetId) || "",
+    targetName: normalizeText(payload.targetName) || "",
+    department: normalizeText(payload.department) || record.sourceDepartment || "",
+    location: normalizeText(payload.location) || record.location || "",
+    urgency: payload.urgency,
+    startDate: normalizeText(payload.startDate) || "",
+    endDate: normalizeText(payload.endDate) || "",
+    justification: normalizeText(payload.justification) || "",
+    requester: normalizeText(payload.requester) || actor,
+    requesterEmail: normalizeText(payload.requesterEmail).toLowerCase() || "",
+    requesterRole: normalizeText(payload.requesterRole) || "Recruiter",
+    status: "Draft",
+    createdAt: now,
+    updatedAt: now,
+    history: [
+      {
+        at: now,
+        by: actor,
+        action: "Draft created",
+        detail: `Drafted a deployment request for ${record.candidateName}.`,
+      },
+    ],
+  });
+
+  const next = [request, ...requests];
+  writeRequests(next);
+
+  recordAdminAuditEvent({
+    actor,
+    action: "Created deployment request",
+    target: record.id,
+    category: "workforce",
+    detail: `${record.candidateName} drafted for deployment.`,
+  });
+
+  return { ok: true, request };
+}
+
+export function updateDeploymentRequest(requestId, payload = {}, actor = "Recruiter") {
+  const requests = readRequests();
+  const request = findRequestRecord(requests, requestId);
+
+  if (!request) {
+    return { ok: false, message: "Deployment request not found." };
+  }
+
+  if (request.status === "Assigned") {
+    return { ok: false, message: "Assigned requests cannot be edited." };
+  }
+
+  const nextRequest = appendRequestHistory(
+    {
+      ...request,
+      targetType: deploymentTargetTypes.includes(payload.targetType)
+        ? payload.targetType
+        : request.targetType,
+      targetId: normalizeText(payload.targetId) || request.targetId,
+      targetName: normalizeText(payload.targetName) || request.targetName,
+      department: normalizeText(payload.department) || request.department,
+      location: normalizeText(payload.location) || request.location,
+      urgency: deploymentUrgencyLevels.includes(payload.urgency)
+        ? payload.urgency
+        : request.urgency,
+      startDate: normalizeText(payload.startDate) || request.startDate,
+      endDate: normalizeText(payload.endDate) || request.endDate,
+      justification: normalizeText(payload.justification) || request.justification,
+      updatedAt: new Date().toISOString(),
+    },
+    actor,
+    "Updated request",
+    `Updated the deployment request for ${request.talentName}.`
+  );
+
+  const next = requests.map((item) => (item.id === request.id ? nextRequest : item));
+  writeRequests(next);
+
+  return { ok: true, request: nextRequest };
+}
+
+export function submitDeploymentRequest(requestId, actor = "Recruiter") {
+  const requests = readRequests();
+  const request = findRequestRecord(requests, requestId);
+
+  if (!request) {
+    return { ok: false, message: "Deployment request not found." };
+  }
+
+  if (request.status === "Assigned") {
+    return { ok: false, message: "Assigned requests cannot be resubmitted." };
+  }
+
+  if (!normalizeText(request.targetName) || !normalizeText(request.justification)) {
+    return { ok: false, message: "Target and justification are required before submission." };
+  }
+
+  const now = new Date().toISOString();
+  const nextRequest = appendRequestHistory(
+    {
+      ...request,
+      status: "Pending Approval",
+      submittedAt: now,
+      submittedBy: actor,
+      updatedAt: now,
+    },
+    actor,
+    "Submitted for approval",
+    `Submitted by ${actor} for admin review.`
+  );
+
+  const next = requests.map((item) => (item.id === request.id ? nextRequest : item));
+  writeRequests(next);
+
+  recordAdminAuditEvent({
+    actor,
+    action: "Submitted deployment request",
+    target: request.talentId,
+    category: "workforce",
+    detail: `${request.talentName} sent for approval to ${request.targetType}: ${request.targetName}.`,
+  });
+
+  return { ok: true, request: nextRequest };
+}
+
+export function rejectDeploymentRequest(requestId, reason = "", actor = "Administrator") {
+  const requests = readRequests();
+  const request = findRequestRecord(requests, requestId);
+
+  if (!request) {
+    return { ok: false, message: "Deployment request not found." };
+  }
+
+  const now = new Date().toISOString();
+  const nextRequest = appendRequestHistory(
+    {
+      ...request,
+      status: "Rejected",
+      rejectedAt: now,
+      rejectedBy: actor,
+      rejectionReason: normalizeText(reason),
+      updatedAt: now,
+    },
+    actor,
+    "Rejected request",
+    normalizeText(reason) || `Rejected deployment request for ${request.talentName}.`
+  );
+
+  const next = requests.map((item) => (item.id === request.id ? nextRequest : item));
+  writeRequests(next);
+
+  recordAdminAuditEvent({
+    actor,
+    action: "Rejected deployment request",
+    target: request.talentId,
+    category: "workforce",
+    detail: `${request.talentName} rejected.${normalizeText(reason) ? ` Reason: ${normalizeText(reason)}` : ""}`,
+  });
+
+  return { ok: true, request: nextRequest };
+}
+
+export function approveDeploymentRequest(requestId, payload = {}, actor = "Administrator") {
+  const requests = readRequests();
+  const request = findRequestRecord(requests, requestId);
+
+  if (!request) {
+    return { ok: false, message: "Deployment request not found." };
+  }
+
+  const now = new Date().toISOString();
+  const approvalNotes = normalizeText(payload.approvalNotes) || request.justification;
+  const approvedRequest = appendRequestHistory(
+    {
+      ...request,
+      status: payload.materializeImmediately === false ? "Approved" : "Approved",
+      approvedAt: now,
+      approvedBy: actor,
+      approvalNotes,
+      updatedAt: now,
+    },
+    actor,
+    "Approved request",
+    approvalNotes ? `Approved by ${actor}. ${approvalNotes}` : `Approved by ${actor}.`
+  );
+
+  const updatedRequests = requests.map((item) => (item.id === request.id ? approvedRequest : item));
+  writeRequests(updatedRequests);
+
+  let assignmentResult = null;
+
+  if (payload.materializeImmediately !== false) {
+    assignmentResult = assignTalentToTarget(
+      request.talentId,
+      {
+        targetType: request.targetType,
+        targetId: normalizeText(payload.targetId) || request.targetId || request.targetName,
+        targetName: normalizeText(payload.targetName) || request.targetName,
+        startDate: normalizeText(payload.startDate) || request.startDate,
+        endDate: normalizeText(payload.endDate) || request.endDate,
+        notes: normalizeText(payload.assignmentNotes) || approvalNotes,
+        requestId: request.id,
+        requestStatus: "Assigned",
+        requester: request.requester,
+        requesterEmail: request.requesterEmail,
+        approvedAt: now,
+        approvedBy: actor,
+        approvalNotes,
+      },
+      actor
+    );
+
+    if (!assignmentResult.ok) {
+      return assignmentResult;
+    }
+
+    const finalizedRequest = appendRequestHistory(
+      {
+        ...approvedRequest,
+        status: "Assigned",
+        assignmentId: assignmentResult.assignment.id,
+        assignmentStatus: assignmentResult.assignment.status,
+        updatedAt: new Date().toISOString(),
+      },
+      actor,
+      "Assigned request",
+      `Assigned to ${request.targetType}: ${request.targetName}.`
+    );
+
+    const finalizedRequests = updatedRequests.map((item) =>
+      item.id === request.id ? finalizedRequest : item
+    );
+    writeRequests(finalizedRequests);
+
+    recordAdminAuditEvent({
+      actor,
+      action: "Assigned deployment request",
+      target: request.talentId,
+      category: "workforce",
+      detail: `${request.talentName} assigned to ${request.targetType}: ${request.targetName}.`,
+    });
+
+    return { ok: true, request: finalizedRequest, assignment: assignmentResult.assignment };
+  }
+
+  recordAdminAuditEvent({
+    actor,
+    action: "Approved deployment request",
+    target: request.talentId,
+    category: "workforce",
+    detail: `${request.talentName} approved for ${request.targetType}: ${request.targetName}.`,
+  });
+
+  return { ok: true, request: approvedRequest };
+}
+
+export function convertDeploymentRequestToAssignment(requestId, payload = {}, actor = "Administrator") {
+  return approveDeploymentRequest(requestId, { ...payload, materializeImmediately: true }, actor);
 }
 
 export function addTalentToPool(source = {}, payload = {}, actor = "Administrator") {
@@ -411,6 +815,7 @@ export function assignTalentToTarget(talentId, payload = {}, actor = "Administra
 
   const pool = readTalentPool();
   const assignments = readAssignments();
+  const requests = readRequests();
   const record = findTalentRecord(pool, talentId);
 
   if (!record) {
@@ -472,6 +877,33 @@ export function assignTalentToTarget(talentId, payload = {}, actor = "Administra
   nextAssignments = [assignment, ...nextAssignments];
   writeAssignments(nextAssignments);
 
+  const linkedRequestId = normalizeText(payload.requestId) || normalizeText(existingActive?.requestId);
+
+  if (linkedRequestId) {
+    const linkedRequest = findRequestRecord(requests, linkedRequestId);
+    if (linkedRequest) {
+      const nextLinkedRequest = appendRequestHistory(
+        {
+          ...linkedRequest,
+          status: "Assigned",
+          assignmentId: assignment.id,
+          assignmentStatus: assignment.status,
+          approvedAt: normalizeText(payload.approvedAt) ? normalizeIsoDate(payload.approvedAt) : linkedRequest.approvedAt,
+          approvedBy: normalizeText(payload.approvedBy) || linkedRequest.approvedBy,
+          approvalNotes: normalizeText(payload.approvalNotes) || linkedRequest.approvalNotes,
+          updatedAt: now,
+        },
+        actor,
+        "Assigned request",
+        `Assigned to ${targetType}: ${targetName}.`
+      );
+
+      writeRequests(
+        requests.map((item) => (item.id === linkedRequest.id ? nextLinkedRequest : item))
+      );
+    }
+  }
+
   const nextRecord = appendTalentHistory(
     {
       ...record,
@@ -506,6 +938,7 @@ export function assignTalentToTarget(talentId, payload = {}, actor = "Administra
 export function releaseTalentFromAssignment(talentId, actor = "Administrator", note = "") {
   const pool = readTalentPool();
   const assignments = readAssignments();
+  const requests = readRequests();
   const record = findTalentRecord(pool, talentId);
   const activeAssignment = findActiveAssignment(assignments, talentId);
 
@@ -535,6 +968,29 @@ export function releaseTalentFromAssignment(talentId, actor = "Administrator", n
     item.id === activeAssignment.id ? releasedAssignment : item
   );
   writeAssignments(nextAssignments);
+
+  if (activeAssignment.requestId) {
+    const linkedRequest = findRequestRecord(requests, activeAssignment.requestId);
+    if (linkedRequest) {
+      const nextLinkedRequest = appendRequestHistory(
+        {
+          ...linkedRequest,
+          assignmentStatus: "Released",
+          updatedAt: now,
+        },
+        actor,
+        "Released assignment",
+        normalizeText(note) ||
+          `Released from ${activeAssignment.targetType}: ${activeAssignment.targetName}.`
+      );
+
+      writeRequests(
+        requests.map((item) =>
+          item.id === linkedRequest.id ? nextLinkedRequest : item
+        )
+      );
+    }
+  }
 
   const nextStatus = record.status === "Archived" ? "Archived" : "Ready";
   const nextRecord = appendTalentHistory(
@@ -571,6 +1027,7 @@ export function releaseTalentFromAssignment(talentId, actor = "Administrator", n
 export function archiveTalentRecord(talentId, actor = "Administrator", reason = "") {
   const pool = readTalentPool();
   const assignments = readAssignments();
+  const requests = readRequests();
   const record = findTalentRecord(pool, talentId);
 
   if (!record) {
@@ -599,6 +1056,28 @@ export function archiveTalentRecord(talentId, actor = "Administrator", reason = 
       item.id === activeAssignment.id ? archivedAssignment : item
     );
     writeAssignments(nextAssignments);
+
+    if (activeAssignment.requestId) {
+      const linkedRequest = findRequestRecord(requests, activeAssignment.requestId);
+      if (linkedRequest) {
+        const nextLinkedRequest = appendRequestHistory(
+          {
+            ...linkedRequest,
+            assignmentStatus: "Archived",
+            updatedAt: now,
+          },
+          actor,
+          "Archived assignment",
+          normalizeText(reason) || "Deployment archived from workforce planning."
+        );
+
+        writeRequests(
+          requests.map((item) =>
+            item.id === linkedRequest.id ? nextLinkedRequest : item
+          )
+        );
+      }
+    }
   }
 
   const nextRecord = appendTalentHistory(
@@ -638,10 +1117,13 @@ export function archiveTalentRecord(talentId, actor = "Administrator", reason = 
 export function getTalentWorkforceSnapshot() {
   const pool = readTalentPool();
   const assignments = readAssignments();
+  const requests = readRequests();
   return {
     pool,
     assignments,
+    requests,
     activeAssignments: assignments.filter((assignment) => assignment.status === "Active"),
+    pendingRequests: requests.filter((request) => request.status === "Pending Approval"),
     deployed: pool.filter((record) => record.status === "Deployed"),
   };
 }

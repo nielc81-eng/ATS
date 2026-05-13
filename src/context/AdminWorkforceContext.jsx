@@ -9,16 +9,27 @@ import React, {
 import { useAuth } from "./AuthContext";
 import {
   addTalentToPool,
+  approveDeploymentRequest,
   archiveTalentRecord,
+  createDeploymentRequest,
   assignTalentToTarget,
   DEPLOYMENT_ASSIGNMENTS_STORAGE_KEY,
+  DEPLOYMENT_REQUESTS_STORAGE_KEY,
   getDeploymentAssignments,
+  getDeploymentRequestById,
+  getDeploymentRequests,
+  getDeploymentRequestsForRequester,
+  getDeploymentRequestsForTalent,
   getTalentAssignmentsForTalent,
   getTalentPoolRecords,
+  rejectDeploymentRequest,
   releaseTalentFromAssignment,
   TALENT_POOL_STORAGE_KEY,
+  submitDeploymentRequest,
   updateTalentRecord,
   updateTalentStatus,
+  updateDeploymentRequest,
+  convertDeploymentRequestToAssignment,
 } from "../lib/adminWorkforceMockData";
 
 const AdminWorkforceContext = createContext(null);
@@ -27,10 +38,12 @@ export function AdminWorkforceProvider({ children }) {
   const { session } = useAuth();
   const [talentPool, setTalentPool] = useState(() => getTalentPoolRecords());
   const [assignments, setAssignments] = useState(() => getDeploymentAssignments());
+  const [requests, setRequests] = useState(() => getDeploymentRequests());
 
   const sync = useCallback(() => {
     setTalentPool(getTalentPoolRecords());
     setAssignments(getDeploymentAssignments());
+    setRequests(getDeploymentRequests());
   }, []);
 
   useEffect(() => {
@@ -39,7 +52,8 @@ export function AdminWorkforceProvider({ children }) {
     const handleStorage = (event) => {
       if (
         event.key === TALENT_POOL_STORAGE_KEY ||
-        event.key === DEPLOYMENT_ASSIGNMENTS_STORAGE_KEY
+        event.key === DEPLOYMENT_ASSIGNMENTS_STORAGE_KEY ||
+        event.key === DEPLOYMENT_REQUESTS_STORAGE_KEY
       ) {
         sync();
       }
@@ -92,6 +106,60 @@ export function AdminWorkforceProvider({ children }) {
     [actor, sync]
   );
 
+  const createRequest = useCallback(
+    (talentId, payload = {}) => {
+      const result = createDeploymentRequest(talentId, payload, actor);
+      if (result.ok) sync();
+      return result;
+    },
+    [actor, sync]
+  );
+
+  const updateRequest = useCallback(
+    (requestId, payload = {}) => {
+      const result = updateDeploymentRequest(requestId, payload, actor);
+      if (result.ok) sync();
+      return result;
+    },
+    [actor, sync]
+  );
+
+  const submitRequest = useCallback(
+    (requestId) => {
+      const result = submitDeploymentRequest(requestId, actor);
+      if (result.ok) sync();
+      return result;
+    },
+    [actor, sync]
+  );
+
+  const approveRequest = useCallback(
+    (requestId, payload = {}) => {
+      const result = approveDeploymentRequest(requestId, payload, actor);
+      if (result.ok) sync();
+      return result;
+    },
+    [actor, sync]
+  );
+
+  const rejectRequest = useCallback(
+    (requestId, reason = "") => {
+      const result = rejectDeploymentRequest(requestId, reason, actor);
+      if (result.ok) sync();
+      return result;
+    },
+    [actor, sync]
+  );
+
+  const convertRequestToAssignment = useCallback(
+    (requestId, payload = {}) => {
+      const result = convertDeploymentRequestToAssignment(requestId, payload, actor);
+      if (result.ok) sync();
+      return result;
+    },
+    [actor, sync]
+  );
+
   const releaseTalent = useCallback(
     (talentId, note = "") => {
       const result = releaseTalentFromAssignment(talentId, actor, note);
@@ -120,31 +188,66 @@ export function AdminWorkforceProvider({ children }) {
     [assignments]
   );
 
+  const getRequestsForTalent = useCallback(
+    (talentId) => getDeploymentRequestsForTalent(talentId),
+    []
+  );
+
+  const getRequestsForRequester = useCallback(
+    (requesterEmail) => getDeploymentRequestsForRequester(requesterEmail),
+    []
+  );
+
+  const getRequestById = useCallback(
+    (requestId) => getDeploymentRequestById(requestId),
+    []
+  );
+
   const value = useMemo(
     () => ({
       talentPool,
       assignments,
+      requests,
       addToPool,
       editTalent,
       setTalentStatus,
       assignTalent,
+      createRequest,
+      updateRequest,
+      submitRequest,
+      approveRequest,
+      rejectRequest,
+      convertRequestToAssignment,
       releaseTalent,
       archiveTalent,
       getAssignmentsForTalent,
       getActiveAssignmentForTalent,
+      getRequestsForTalent,
+      getRequestsForRequester,
+      getRequestById,
       refreshWorkforceData: sync,
     }),
     [
       talentPool,
       assignments,
+      requests,
       addToPool,
       editTalent,
       setTalentStatus,
       assignTalent,
+      createRequest,
+      updateRequest,
+      submitRequest,
+      approveRequest,
+      rejectRequest,
+      convertRequestToAssignment,
       releaseTalent,
       archiveTalent,
       getAssignmentsForTalent,
       getActiveAssignmentForTalent,
+      getRequestsForTalent,
+      getRequestsForRequester,
+      getRequestById,
       sync,
     ]
   );

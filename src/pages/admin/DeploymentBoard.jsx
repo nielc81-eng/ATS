@@ -511,6 +511,9 @@ export default function AdminDeploymentBoard() {
                       <p className="mt-1 text-xs text-slate-500">
                         {assignment.targetType}: {assignment.targetName}
                       </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Requested by {assignment.requester || "Recruiter"} {assignment.approvedBy ? `• Approved by ${assignment.approvedBy}` : ""}
+                      </p>
                     </div>
                     <span className={["rounded-full border px-3 py-1 text-xs font-semibold", badgeTone(assignment.status)].join(" ")}>
                       {assignment.status}
@@ -558,6 +561,11 @@ export default function AdminDeploymentBoard() {
 
                   <div className="mt-4 space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-sm font-semibold text-slate-950">Assignment history</p>
+                    {assignment.requestId ? (
+                      <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                        Request {assignment.requestId}
+                      </div>
+                    ) : null}
                     {assignment.history.slice(0, 3).map((entry) => (
                       <div key={`${entry.action}-${entry.at}`} className="text-sm text-slate-600">
                         <span className="font-semibold text-slate-900">{entry.action}</span> - {entry.detail}

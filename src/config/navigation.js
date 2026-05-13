@@ -6,6 +6,11 @@ export const navigationByRole = {
       hint: "Resume upload and status",
     },
     {
+      label: "Edit Profile",
+      to: "/candidate/profile/edit",
+      hint: "Review and correct details",
+    },
+    {
       label: "Browse Jobs",
       to: "/jobs",
       hint: "Public opportunities",
@@ -41,6 +46,16 @@ export const navigationByRole = {
       label: "Analytics",
       to: "/recruiter/analytics",
       hint: "Reports and charts",
+    },
+    {
+      label: "Talent Pool",
+      to: "/recruiter/talent-pool",
+      hint: "Pooled talent operations",
+    },
+    {
+      label: "Deployment Requests",
+      to: "/recruiter/deployment",
+      hint: "Request admin deployment approval",
     },
   ],
   Administrator: [
@@ -78,6 +93,11 @@ export const navigationByRole = {
       label: "Talent Pool",
       to: "/admin/talent-pool",
       hint: "Reusable workforce bench",
+    },
+    {
+      label: "Deployment Approvals",
+      to: "/admin/deployment-approvals",
+      hint: "Review recruiter requests",
     },
     {
       label: "Deployment Board",

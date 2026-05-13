@@ -6,6 +6,8 @@ import UploadDropzone, {
 import { useAuth } from "../../context/AuthContext";
 import { useCandidate201Files } from "../../context/Candidate201FilesContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import { writeStoredResumeProfile } from "../../lib/candidateProfileStorage";
+import { buildResumeBaselineFromParsed } from "../../lib/resumeExtractionMocks";
 import {
   candidate201Statuses,
   get201StatusTone,
@@ -344,6 +346,15 @@ function ParsedDataCard({ parsed }) {
           </ul>
         </article>
       </div>
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Link
+          to="/candidate/profile/edit"
+          className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          Edit Profile
+        </Link>
+      </div>
     </section>
   );
 }
@@ -451,19 +462,13 @@ export default function CandidateDashboard() {
 
           const parseTimer = window.setTimeout(() => {
             const parsed = buildMockParsedData(file.name);
+            const resumeBaseline = buildResumeBaselineFromParsed(parsed);
             setStage("complete");
             setStatusMessage("Resume processed successfully.");
             setParsedData(parsed);
 
             if (typeof window !== "undefined" && session?.email) {
-              const profilePayload = {
-                skills: parsed.skills,
-                yearsExperience: extractYearsExperience(parsed.experience),
-              };
-              window.localStorage.setItem(
-                `candidate_resume_profile_v1:${session.email}`,
-                JSON.stringify(profilePayload)
-              );
+              writeStoredResumeProfile(session.email, resumeBaseline);
             }
           }, 1800);
 

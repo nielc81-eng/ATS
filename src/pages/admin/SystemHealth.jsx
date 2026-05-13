@@ -12,7 +12,7 @@ function formatNumber(value) {
 
 export default function AdminSystemHealth() {
   const { users, auditEvents } = useAdminData();
-  const { talentPool, assignments } = useAdminWorkforce();
+  const { talentPool, assignments, requests } = useAdminWorkforce();
   const { jobs } = useRecruitmentData();
   const { files } = useDigitalFiles();
   const { items } = useRecruiterDocsInbox();
@@ -29,8 +29,10 @@ export default function AdminSystemHealth() {
       docs: docs.length,
       pool: talentPool.length,
       deployments: assignments.filter((assignment) => assignment.status === "Active").length,
+      requests: requests.length,
+      pendingRequests: requests.filter((request) => request.status === "Pending Approval").length,
     }),
-    [users, auditEvents, jobs, files, items, docs, talentPool, assignments]
+    [users, auditEvents, jobs, files, items, docs, talentPool, assignments, requests]
   );
 
   const healthChecks = [
@@ -74,6 +76,8 @@ export default function AdminSystemHealth() {
           { label: "File records", value: stats.files },
           { label: "Talent pool", value: stats.pool },
           { label: "Deployments", value: stats.deployments },
+          { label: "Requests", value: stats.requests },
+          { label: "Pending requests", value: stats.pendingRequests },
         ].map((item) => (
           <article key={item.label} className="surface-card p-5">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</p>

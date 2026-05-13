@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAdminData } from "../../context/AdminDataContext";
+import { useAdminWorkforce } from "../../context/AdminWorkforceContext";
 import { useDigitalFiles } from "../../context/DigitalFilesContext";
 import { useRecruiterDocsInbox } from "../../context/RecruiterDocsInboxContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
@@ -41,6 +42,7 @@ function MetricCard({ label, value, note, tone = "slate" }) {
 
 export default function AdminDashboard() {
   const { users, auditEvents } = useAdminData();
+  const { requests, assignments } = useAdminWorkforce();
   const { jobs, applicationsByEmail } = useRecruitmentData();
   const { files } = useDigitalFiles();
   const { items } = useRecruiterDocsInbox();
@@ -72,8 +74,11 @@ export default function AdminDashboard() {
         files.filter((file) => file.status === "Needs Action").length +
         allApplications.filter((application) => application.status === "Rejected").length,
       applicationDistribution,
+      deploymentRequests: requests.length,
+      pendingDeploymentRequests: requests.filter((request) => request.status === "Pending Approval").length,
+      activeDeployments: assignments.filter((assignment) => assignment.status === "Active").length,
     };
-  }, [allApplications, files, items, jobs, users]);
+  }, [allApplications, assignments, files, items, jobs, requests, users]);
 
   const recentEvents = auditEvents.slice(0, 6);
   const flaggedFiles = files.filter((file) => file.status === "Needs Action").slice(0, 3);
@@ -114,6 +119,11 @@ export default function AdminDashboard() {
           note="Needs-action files and rejected applications."
           tone="amber"
         />
+        <MetricCard
+          label="Deployment requests"
+          value={formatNumber(stats.deploymentRequests)}
+          note={`${formatNumber(stats.pendingDeploymentRequests)} pending approvals.`}
+        />
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -130,6 +140,7 @@ export default function AdminDashboard() {
           { label: "Recruiter Activity", to: "/admin/recruiter-activity", note: "Monitor hiring workflow." },
           { label: "Digital 201 Files Review", to: "/admin/files-review", note: "Inspect file status changes." },
           { label: "Talent Pool", to: "/admin/talent-pool", note: "Build a reusable talent bench." },
+          { label: "Deployment Approvals", to: "/admin/deployment-approvals", note: "Approve recruiter requests." },
           { label: "Deployment Board", to: "/admin/deployment-board", note: "Assign talent to coverage needs." },
         ].map((link) => (
           <Link

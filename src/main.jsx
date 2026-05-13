@@ -5,7 +5,9 @@ import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { Candidate201FilesProvider } from "./context/Candidate201FilesContext";
 import { DigitalFilesProvider } from "./context/DigitalFilesContext";
+import { AdminWorkforceProvider } from "./context/AdminWorkforceContext";
 import { RecruitmentDataProvider } from "./context/RecruitmentDataContext";
+import { TalentPoolProvider } from "./context/TalentPoolContext";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -15,7 +17,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <RecruitmentDataProvider>
           <Candidate201FilesProvider>
             <DigitalFilesProvider>
-              <App />
+              <AdminWorkforceProvider>
+                <TalentPoolProvider>
+                  <App />
+                </TalentPoolProvider>
+              </AdminWorkforceProvider>
             </DigitalFilesProvider>
           </Candidate201FilesProvider>
         </RecruitmentDataProvider>
