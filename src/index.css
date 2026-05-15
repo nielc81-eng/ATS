@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --layout-max-wide: 96rem;
+    --layout-max-standard: 80rem;
+    --layout-max-narrow: 64rem;
+    --layout-radius-card: 1.5rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-slate-50 text-slate-900 antialiased;
+    background-image:
+      radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 30%),
+      radial-gradient(circle at top right, rgba(15, 23, 42, 0.08), transparent 22%),
+      linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .surface-card {
+    @apply rounded-3xl border border-white/70 bg-white/80 shadow-soft backdrop-blur;
+    border-radius: var(--layout-radius-card);
+  }
+
+  .section-heading {
+    @apply text-sm font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+}
