@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AICandidateCard from "../../components/recruiter/AICandidateCard";
 import CandidateProfileModal from "../../components/recruiter/CandidateProfileModal";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
@@ -46,8 +46,10 @@ function getScreeningStats(candidates, applications) {
 export default function RecruiterScreening() {
   const { screeningJobs, getCandidatesForJob, getApplicationsForJob, updateApplicationStatus } =
     useRecruitmentData();
+  const { jobId: routeJobId = "" } = useParams();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const jobParam = searchParams.get("job")?.trim() ?? "";
+  const jobParam = routeJobId || searchParams.get("job")?.trim() || "";
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
 
   // URL is the single source of truth. Derive the active job ID from the URL param.
@@ -64,13 +66,14 @@ export default function RecruiterScreening() {
   // Only re-run when jobParam or selectedJobId changes - not when the searchParams object
   // reference changes - to avoid creating spurious history entries.
   useEffect(() => {
+    if (routeJobId) return;
     if (selectedJobId && jobParam !== selectedJobId) {
       const nextParams = new URLSearchParams(searchParamsRef.current);
       nextParams.set("job", selectedJobId);
       setSearchParams(nextParams, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobParam, selectedJobId, setSearchParams]);
+  }, [jobParam, routeJobId, selectedJobId, setSearchParams]);
 
   const selectedJob = useMemo(
     () => screeningJobs.find((job) => job.id === selectedJobId) ?? null,
@@ -160,6 +163,12 @@ export default function RecruiterScreening() {
             id="screening-job"
             value={selectedJobId}
             onChange={(event) => {
+              if (routeJobId) {
+                navigate(`/recruiter/jobs/${encodeURIComponent(event.target.value)}/screening`, {
+                  replace: true,
+                });
+                return;
+              }
               const nextParams = new URLSearchParams(searchParams);
               nextParams.set("job", event.target.value);
               setSearchParams(nextParams, { replace: true });

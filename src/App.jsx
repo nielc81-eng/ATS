@@ -9,12 +9,16 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
-import CandidateDashboard from "./pages/candidate/Dashboard";
+import CandidateDocuments from "./pages/candidate/Dashboard";
+import CandidateHome from "./pages/candidate/Home";
+import CandidateNotifications from "./pages/candidate/Notifications";
 import RecruiterDashboard from "./pages/recruiter/Dashboard";
 import RecruiterJobs from "./pages/recruiter/Jobs";
-import RecruiterApplicantCategories from "./pages/recruiter/ApplicantCategories";
+import RecruiterApplicants from "./pages/recruiter/Applicants";
 import RecruiterScreening from "./pages/recruiter/Screening";
 import RecruiterAnalytics from "./pages/recruiter/Analytics";
+import RecruiterJobModuleLayout from "./pages/recruiter/JobModuleLayout";
+import RecruiterJobOverview from "./pages/recruiter/JobOverview";
 import RecruiterDigitalFiles from "./pages/recruiter/DigitalFiles";
 import RecruiterTalentPool from "./pages/recruiter/TalentPool";
 import RecruiterComplianceGate from "./pages/recruiter/ComplianceGate";
@@ -31,10 +35,16 @@ import AdminPolicies from "./pages/admin/Policies";
 import AdminUsageHistory from "./pages/admin/UsageHistory";
 import AdminSystemCleanup from "./pages/admin/SystemCleanup";
 import AdminProfile from "./pages/admin/Profile";
+import AdminReports from "./pages/admin/Reports";
+import AdminSystem from "./pages/admin/System";
+import AdminSettings from "./pages/admin/Settings";
 import DeploymentManagerDashboard from "./pages/deploymentManager/Dashboard";
 import DeploymentManagerDeployments from "./pages/deploymentManager/Deployments";
 import DeploymentManagerVault from "./pages/deploymentManager/Vault";
 import DeploymentManagerAlerts from "./pages/deploymentManager/Alerts";
+import DeploymentManagerRequests from "./pages/deploymentManager/Requests";
+import DeploymentManagerAssignments from "./pages/deploymentManager/Assignments";
+import DeploymentManagerSchedule from "./pages/deploymentManager/Schedule";
 import { scrollToTop } from "./lib/scroll";
 
 function ScrollToTop() {
@@ -82,13 +92,24 @@ export default function App() {
             }
           >
             <Route element={<AppLayout />}>
-              <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+              <Route path="/candidate/dashboard" element={<CandidateHome />} />
+              <Route path="/candidate/profile" element={<Navigate to="/account/profile" replace />} />
               <Route path="/candidate/profile/edit" element={<Navigate to="/account/profile" replace />} />
               <Route path="/account/profile" element={<AccountProfile />} />
               <Route path="/candidate/applications" element={<CandidateApplications />} />
+              <Route path="/candidate/documents" element={<CandidateDocuments />} />
+              <Route path="/candidate/notifications" element={<CandidateNotifications />} />
               <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
               <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
-              <Route path="/recruiter/applicant-categories" element={<RecruiterApplicantCategories />} />
+              <Route path="/recruiter/applicants" element={<RecruiterApplicants />} />
+              <Route path="/recruiter/jobs/:jobId" element={<RecruiterJobModuleLayout />}>
+                <Route path="overview" element={<RecruiterJobOverview />} />
+                <Route path="applicants" element={<RecruiterApplicants />} />
+                <Route path="screening" element={<RecruiterScreening />} />
+                <Route path="analytics" element={<RecruiterAnalytics />} />
+                <Route path="" element={<Navigate to="overview" replace />} />
+              </Route>
+              <Route path="/recruiter/applicant-categories" element={<Navigate to="/recruiter/applicants" replace />} />
               <Route path="/recruiter/files" element={<RecruiterDigitalFiles />} />
               <Route path="/recruiter/screening" element={<RecruiterScreening />} />
               <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
@@ -96,17 +117,21 @@ export default function App() {
               <Route path="/recruiter/compliance-gate" element={<RecruiterComplianceGate />} />
 
               <Route path="/deployment-manager/dashboard" element={<DeploymentManagerDashboard />} />
+              <Route path="/deployment-manager/requests" element={<DeploymentManagerRequests />} />
+              <Route path="/deployment-manager/assignments" element={<DeploymentManagerAssignments />} />
+              <Route path="/deployment-manager/schedule" element={<DeploymentManagerSchedule />} />
+              <Route path="/deployment-manager/notifications" element={<DeploymentManagerAlerts />} />
               <Route path="/deployment-manager/deployments" element={<DeploymentManagerDeployments />} />
               <Route path="/deployment-manager/vault" element={<DeploymentManagerVault />} />
               <Route path="/deployment-manager/alerts" element={<DeploymentManagerAlerts />} />
 
               <Route
                 path="/deployment-manager/deployment-approvals"
-                element={<Navigate to="/deployment-manager/deployments" replace />}
+                element={<Navigate to="/deployment-manager/requests" replace />}
               />
               <Route
                 path="/deployment-manager/deployment-board"
-                element={<Navigate to="/deployment-manager/deployments" replace />}
+                element={<Navigate to="/deployment-manager/assignments" replace />}
               />
               <Route
                 path="/deployment-manager/files"
@@ -114,20 +139,25 @@ export default function App() {
               />
               <Route
                 path="/deployment-manager/system-health"
-                element={<Navigate to="/deployment-manager/alerts" replace />}
+                element={<Navigate to="/deployment-manager/notifications" replace />}
               />
             </Route>
 
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/profile" element={<AdminProfile />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/staff-accounts" element={<AdminUsers />} />
+              <Route path="/admin/roles-and-privileges" element={<AdminWorkPrivileges />} />
               <Route path="/admin/work-privileges" element={<AdminWorkPrivileges />} />
               <Route path="/admin/policies" element={<AdminPolicies />} />
+              <Route path="/admin/audit" element={<AdminUsageHistory />} />
               <Route path="/admin/usage-history" element={<AdminUsageHistory />} />
+              <Route path="/admin/reports" element={<AdminReports />} />
+              <Route path="/admin/system" element={<AdminSystem />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/admin/system-cleanup" element={<AdminSystemCleanup />} />
 
-              <Route path="/admin/users" element={<Navigate to="/admin/staff-accounts" replace />} />
               <Route path="/admin/audit-log" element={<Navigate to="/admin/usage-history" replace />} />
               <Route path="/admin/recruiter-activity" element={<Navigate to="/admin/usage-history" replace />} />
               <Route path="/admin/candidate-activity" element={<Navigate to="/admin/usage-history" replace />} />

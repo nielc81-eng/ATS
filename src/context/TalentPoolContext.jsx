@@ -609,6 +609,69 @@ export function TalentPoolProvider({ children }) {
     [accessiblePoolIds, actor, session?.role, state.pools]
   );
 
+  const addCandidateFromResumeUpload = useCallback(
+    (payload = {}) => {
+      const poolIds = dedupe(
+        normalizeArray(payload.poolIds).filter((poolId) =>
+          state.pools.some((pool) => pool.id === poolId)
+        )
+      );
+      if (poolIds.length === 0) {
+        return { ok: false, message: "Choose at least one pool." };
+      }
+
+      if (session?.role === "Recruiter") {
+        const blockedPool = poolIds.some((poolId) => !accessiblePoolIds.includes(poolId));
+        if (blockedPool) {
+          return { ok: false, message: "You can only add candidates to assigned pools." };
+        }
+      }
+
+      const name = normalizeText(payload.name);
+      if (!name) {
+        return { ok: false, message: "Candidate name is required." };
+      }
+
+      const now = new Date().toISOString();
+      const status = talentPoolStatuses.includes(payload.status) ? payload.status : "New";
+      const candidate = normalizeCandidate({
+        id: createTalentId(),
+        name,
+        email: normalizeText(payload.email, ""),
+        location: normalizeText(payload.location, "Remote"),
+        availability: candidateAvailabilityStates.includes(payload.availability)
+          ? payload.availability
+          : "Immediate",
+        skills: dedupe(tokenize(payload.skills)),
+        tags: dedupe(tokenize(payload.tags)),
+        poolIds,
+        status,
+        source: "ResumeUpload",
+        sourceApplicationId: "",
+        confidence: clampNumber(payload.confidence, 0, 100, 70),
+        createdOn: now,
+        updatedOn: now,
+        statusHistory: [
+          {
+            at: now,
+            status,
+            note: normalizeText(payload.note, "Imported from resume upload."),
+            by: actor,
+          },
+        ],
+      });
+
+      setState((prev) => ({
+        ...prev,
+        candidates: [candidate, ...prev.candidates],
+        updatedOn: now,
+      }));
+
+      return { ok: true, candidate };
+    },
+    [accessiblePoolIds, actor, session?.role, state.pools]
+  );
+
   const updateCandidateStatus = useCallback(
     (candidateId, status, note = "") => {
       if (!talentPoolStatuses.includes(status)) {
@@ -913,6 +976,7 @@ export function TalentPoolProvider({ children }) {
       analytics,
       addCandidateFromApplication,
       addManualCandidate,
+      addCandidateFromResumeUpload,
       updateCandidateStatus,
       updateCandidateDetails,
       upsertPool,
@@ -922,6 +986,7 @@ export function TalentPoolProvider({ children }) {
     }),
     [
       addCandidateFromApplication,
+      addCandidateFromResumeUpload,
       addManualCandidate,
       analytics,
       candidateApplicationsForIntake,

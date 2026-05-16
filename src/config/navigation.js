@@ -3,7 +3,12 @@ export const navigationByRole = {
     {
       label: "Dashboard",
       to: "/candidate/dashboard",
-      hint: "Resume upload and status",
+      hint: "Overview and quick actions",
+    },
+    {
+      label: "Profile",
+      to: "/candidate/profile",
+      hint: "Manage personal profile",
     },
     {
       label: "Browse Jobs",
@@ -14,6 +19,16 @@ export const navigationByRole = {
       label: "Applications",
       to: "/candidate/applications",
       hint: "Track status updates",
+    },
+    {
+      label: "Documents",
+      to: "/candidate/documents",
+      hint: "Resume and onboarding files",
+    },
+    {
+      label: "Notifications",
+      to: "/candidate/notifications",
+      hint: "Latest activity updates",
     },
   ],
   Recruiter: [
@@ -28,9 +43,9 @@ export const navigationByRole = {
       hint: "Requisitions",
     },
     {
-      label: "Applicant Categories",
-      to: "/recruiter/applicant-categories",
-      hint: "Department applicant counts and drill-down",
+      label: "Applicants",
+      to: "/recruiter/applicants",
+      hint: "Search and manage applicants",
     },
     {
       label: "Digital 201 Files",
@@ -65,9 +80,19 @@ export const navigationByRole = {
       hint: "Deployment operations overview",
     },
     {
-      label: "Active Deployments",
-      to: "/deployment-manager/deployments",
-      hint: "Monitor and update deployment status",
+      label: "Requests",
+      to: "/deployment-manager/requests",
+      hint: "Review and decide deployment requests",
+    },
+    {
+      label: "Assignments",
+      to: "/deployment-manager/assignments",
+      hint: "Monitor and update active assignments",
+    },
+    {
+      label: "Schedule",
+      to: "/deployment-manager/schedule",
+      hint: "Track planned and active schedules",
     },
     {
       label: "Digital 201 Vault",
@@ -75,8 +100,8 @@ export const navigationByRole = {
       hint: "Manage employee vault records",
     },
     {
-      label: "Alerts and Notifications",
-      to: "/deployment-manager/alerts",
+      label: "Notifications",
+      to: "/deployment-manager/notifications",
       hint: "Expiration alerts and compliance triggers",
     },
   ],
@@ -88,12 +113,12 @@ export const navigationByRole = {
     },
     {
       label: "Manage Staff Accounts",
-      to: "/admin/staff-accounts",
+      to: "/admin/users",
       hint: "Create, archive, and restore accounts",
     },
     {
-      label: "Assign Work Privileges",
-      to: "/admin/work-privileges",
+      label: "Roles and Privileges",
+      to: "/admin/roles-and-privileges",
       hint: "Role-based access assignments",
     },
     {
@@ -102,14 +127,24 @@ export const navigationByRole = {
       hint: "Set policy guardrails and defaults",
     },
     {
-      label: "Usage History",
-      to: "/admin/usage-history",
+      label: "Audit Timeline",
+      to: "/admin/audit",
       hint: "Monitor platform activity timelines",
     },
     {
-      label: "System Cleanup and Backup",
-      to: "/admin/system-cleanup",
+      label: "Reports",
+      to: "/admin/reports",
+      hint: "Operational report hub",
+    },
+    {
+      label: "System",
+      to: "/admin/system",
       hint: "Cleanup and backup controls",
+    },
+    {
+      label: "Settings",
+      to: "/admin/settings",
+      hint: "Admin profile and policy settings",
     },
   ],
 };

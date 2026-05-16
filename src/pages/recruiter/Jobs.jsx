@@ -430,13 +430,13 @@ export default function RecruiterJobs() {
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
                         <Link
-                          to={`/recruiter/screening?job=${encodeURIComponent(job.id)}`}
+                          to={`/recruiter/jobs/${encodeURIComponent(job.id)}/applicants`}
                           className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
                         >
                           View Candidates
                         </Link>
                         <Link
-                          to={`/recruiter/analytics?job=${encodeURIComponent(job.id)}`}
+                          to={`/recruiter/jobs/${encodeURIComponent(job.id)}/analytics`}
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                         >
                           Analytics

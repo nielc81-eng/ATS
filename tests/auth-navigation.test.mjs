@@ -75,11 +75,21 @@ test("public copy no longer references blind screening or bias mitigation", () =
 });
 
 test("navigation conformance: TA, deployment manager, and admin menus match the flow definitions", () => {
+  const candidateLinks = (navigationByRole.Candidate || []).map((item) => item.to);
+  assert.deepEqual(candidateLinks, [
+    "/candidate/dashboard",
+    "/candidate/profile",
+    "/jobs",
+    "/candidate/applications",
+    "/candidate/documents",
+    "/candidate/notifications",
+  ]);
+
   const recruiterLinks = (navigationByRole.Recruiter || []).map((item) => item.to);
   assert.deepEqual(recruiterLinks, [
     "/recruiter/dashboard",
     "/recruiter/jobs",
-    "/recruiter/applicant-categories",
+    "/recruiter/applicants",
     "/recruiter/files",
     "/recruiter/screening",
     "/recruiter/analytics",
@@ -91,19 +101,23 @@ test("navigation conformance: TA, deployment manager, and admin menus match the 
   const deploymentLinks = (navigationByRole.DeploymentManager || []).map((item) => item.to);
   assert.deepEqual(deploymentLinks, [
     "/deployment-manager/dashboard",
-    "/deployment-manager/deployments",
+    "/deployment-manager/requests",
+    "/deployment-manager/assignments",
+    "/deployment-manager/schedule",
     "/deployment-manager/vault",
-    "/deployment-manager/alerts",
+    "/deployment-manager/notifications",
   ]);
 
   const adminLinks = (navigationByRole.Administrator || []).map((item) => item.to);
   assert.deepEqual(adminLinks, [
     "/admin/dashboard",
-    "/admin/staff-accounts",
-    "/admin/work-privileges",
+    "/admin/users",
+    "/admin/roles-and-privileges",
     "/admin/policies",
-    "/admin/usage-history",
-    "/admin/system-cleanup",
+    "/admin/audit",
+    "/admin/reports",
+    "/admin/system",
+    "/admin/settings",
   ]);
   assert.equal(adminLinks.includes("/admin/talent-pool"), false);
   assert.equal(adminLinks.includes("/admin/deployment-board"), false);

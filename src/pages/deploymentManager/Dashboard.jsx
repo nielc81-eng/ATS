@@ -49,10 +49,11 @@ export default function DeploymentManagerDashboard() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Monitor active deployments", "/deployment-manager/deployments"],
-          ["Update deployment status", "/deployment-manager/deployments"],
+          ["Review deployment requests", "/deployment-manager/requests"],
+          ["Monitor active assignments", "/deployment-manager/assignments"],
+          ["View deployment schedule", "/deployment-manager/schedule"],
           ["Manage Digital 201 vault", "/deployment-manager/vault"],
-          ["Trigger compliance notifications", "/deployment-manager/alerts"],
+          ["Trigger compliance notifications", "/deployment-manager/notifications"],
         ].map(([label, to]) => (
           <Link
             key={to}

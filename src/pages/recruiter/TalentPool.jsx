@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useTalentPool } from "../../context/TalentPoolContext";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
+import AutomatedApplicationIntake from "../../components/talentPool/AutomatedApplicationIntake";
 import {
   candidateAvailabilityStates,
   talentPoolStatuses,
@@ -40,7 +41,7 @@ export default function RecruiterTalentPool() {
     matchingSettings,
     recommendationMap,
     addCandidateFromApplication,
-    addManualCandidate,
+    addCandidateFromResumeUpload,
     updateCandidateStatus,
     updateCandidateDetails,
   } = useTalentPool();
@@ -55,15 +56,6 @@ export default function RecruiterTalentPool() {
     visibleCandidates[0]?.id || ""
   );
   const [intakePoolByApplication, setIntakePoolByApplication] = useState({});
-  const [manualForm, setManualForm] = useState({
-    name: "",
-    email: "",
-    location: "Remote",
-    availability: "Immediate",
-    skills: "",
-    tags: "",
-    poolIds: visiblePools.length > 0 ? [visiblePools[0].id] : [],
-  });
   const [detailForm, setDetailForm] = useState({
     location: "",
     availability: "Immediate",
@@ -161,21 +153,6 @@ export default function RecruiterTalentPool() {
     });
   }, [selectedCandidate]);
 
-  useEffect(() => {
-    if (visiblePools.length === 0) {
-      setManualForm((prev) => ({ ...prev, poolIds: [] }));
-      return;
-    }
-    setManualForm((prev) =>
-      prev.poolIds.length > 0
-        ? prev
-        : {
-            ...prev,
-            poolIds: [visiblePools[0].id],
-          }
-    );
-  }, [visiblePools]);
-
   const statusCounts = useMemo(() => {
     return talentPoolStatuses.reduce((acc, status) => {
       acc[status] = visibleCandidates.filter((candidate) => candidate.status === status).length;
@@ -200,35 +177,6 @@ export default function RecruiterTalentPool() {
         ? `Candidate ${result.candidate.name} added from application intake.`
         : result.message
     );
-  };
-
-  const handleManualAdd = (event) => {
-    event.preventDefault();
-    const result = addManualCandidate({
-      ...manualForm,
-      skills: splitCsv(manualForm.skills),
-      tags: splitCsv(manualForm.tags),
-      status: "New",
-      confidence: 70,
-      note: "Added manually by recruiter.",
-    });
-    if (!result.ok) {
-      setNotice(result.message);
-      return;
-    }
-
-    setManualForm((prev) => ({
-      ...prev,
-      name: "",
-      email: "",
-      location: "Remote",
-      availability: "Immediate",
-      skills: "",
-      tags: "",
-      poolIds: visiblePools.length > 0 ? [visiblePools[0].id] : [],
-    }));
-    setNotice(`Manual candidate ${result.candidate.name} added.`);
-    setSelectedCandidateId(result.candidate.id);
   };
 
   const handleSaveCandidate = () => {
@@ -373,101 +321,14 @@ export default function RecruiterTalentPool() {
           </div>
         </article>
 
-        <article className="surface-card p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Manual Candidate Add</h2>
-          <form className="mt-4 space-y-3" onSubmit={handleManualAdd}>
-            <input
-              value={manualForm.name}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, name: event.target.value }))
-              }
-              placeholder="Candidate name"
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-            <input
-              value={manualForm.email}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, email: event.target.value }))
-              }
-              placeholder="Candidate email"
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                value={manualForm.location}
-                onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, location: event.target.value }))
-                }
-                placeholder="Location"
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              />
-              <select
-                value={manualForm.availability}
-                onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, availability: event.target.value }))
-                }
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              >
-                {candidateAvailabilityStates.map((availability) => (
-                  <option key={availability} value={availability}>
-                    {availability}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <input
-              value={manualForm.skills}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, skills: event.target.value }))
-              }
-              placeholder="Skills (comma separated)"
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-            <input
-              value={manualForm.tags}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, tags: event.target.value }))
-              }
-              placeholder="Tags (comma separated)"
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-            />
-
-            <div className="flex flex-wrap gap-2">
-              {visiblePools.map((pool) => {
-                const active = manualForm.poolIds.includes(pool.id);
-                return (
-                  <button
-                    key={`manual-${pool.id}`}
-                    type="button"
-                    onClick={() =>
-                      setManualForm((prev) => ({
-                        ...prev,
-                        poolIds: active
-                          ? prev.poolIds.filter((poolId) => poolId !== pool.id)
-                          : [...prev.poolIds, pool.id],
-                      }))
-                    }
-                    className={[
-                      "rounded-full px-3 py-1 text-xs font-semibold transition",
-                      active
-                        ? "bg-slate-950 text-white"
-                        : "border border-slate-300 bg-white text-slate-700 hover:border-slate-400",
-                    ].join(" ")}
-                  >
-                    {pool.id}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              type="submit"
-              className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Add Candidate
-            </button>
-          </form>
-        </article>
+        <AutomatedApplicationIntake
+          pools={visiblePools}
+          addCandidateFromResumeUpload={addCandidateFromResumeUpload}
+          onCandidateAdded={(candidate) => {
+            setNotice(`Resume candidate ${candidate.name} added.`);
+            setSelectedCandidateId(candidate.id);
+          }}
+        />
       </section>
 
       <section className="surface-card p-6">
