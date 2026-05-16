@@ -30,7 +30,6 @@ import PublicJobDetail from "./pages/public/JobDetail";
 import { RecruiterDocsInboxProvider } from "./context/RecruiterDocsInboxContext";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
-import AdminWorkPrivileges from "./pages/admin/WorkPrivileges";
 import AdminPolicies from "./pages/admin/Policies";
 import AdminUsageHistory from "./pages/admin/UsageHistory";
 import AdminSystemCleanup from "./pages/admin/SystemCleanup";
@@ -148,8 +147,8 @@ export default function App() {
               <Route path="/admin/profile" element={<AdminProfile />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/staff-accounts" element={<AdminUsers />} />
-              <Route path="/admin/roles-and-privileges" element={<AdminWorkPrivileges />} />
-              <Route path="/admin/work-privileges" element={<AdminWorkPrivileges />} />
+              <Route path="/admin/roles-and-privileges" element={<Navigate to="/admin/users" replace />} />
+              <Route path="/admin/work-privileges" element={<Navigate to="/admin/users" replace />} />
               <Route path="/admin/policies" element={<AdminPolicies />} />
               <Route path="/admin/audit" element={<AdminUsageHistory />} />
               <Route path="/admin/usage-history" element={<AdminUsageHistory />} />

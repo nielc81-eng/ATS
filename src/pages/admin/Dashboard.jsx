@@ -132,8 +132,7 @@ export default function AdminDashboard() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
-          { label: "Manage Staff Accounts", to: "/admin/staff-accounts", note: "Archive or restore staff access." },
-          { label: "Assign Work Privileges", to: "/admin/work-privileges", note: "Update role-based permissions." },
+          { label: "Manage Staff Accounts", to: "/admin/staff-accounts", note: "Manage accounts, roles, and privileges." },
           { label: "Set Recruitment and AI Policies", to: "/admin/policies", note: "Configure policy defaults." },
           { label: "Monitor Usage History", to: "/admin/usage-history", note: "Review platform activity timeline." },
           { label: "System Cleanup and Data Backup", to: "/admin/system-cleanup", note: "Run cleanup review and backups." },

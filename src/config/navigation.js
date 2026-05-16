@@ -6,11 +6,6 @@ export const navigationByRole = {
       hint: "Overview and quick actions",
     },
     {
-      label: "Profile",
-      to: "/candidate/profile",
-      hint: "Manage personal profile",
-    },
-    {
       label: "Browse Jobs",
       to: "/jobs",
       hint: "Public opportunities",
@@ -114,12 +109,7 @@ export const navigationByRole = {
     {
       label: "Manage Staff Accounts",
       to: "/admin/users",
-      hint: "Create, archive, and restore accounts",
-    },
-    {
-      label: "Roles and Privileges",
-      to: "/admin/roles-and-privileges",
-      hint: "Role-based access assignments",
+      hint: "Manage accounts, roles, and privileges",
     },
     {
       label: "Recruitment and AI Policies",

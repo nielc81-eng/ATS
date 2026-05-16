@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
 import UploadDropzone, {
   validateResumeFile,
 } from "../../components/candidate/UploadDropzone";
@@ -128,7 +130,7 @@ function validateCandidateDocFile(file) {
 
 function StageIndicator({ currentStage, uploadProgress }) {
   return (
-    <div className="surface-card p-5">
+    <Card delay={0.1}>
       <p className="section-heading">Upload Status</p>
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         {stageOrder.slice(1).map((stage) => {
@@ -166,7 +168,7 @@ function StageIndicator({ currentStage, uploadProgress }) {
           </div>
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 }
 
@@ -313,7 +315,7 @@ function Candidate201DocCard({
 
 function ParsedDataCard({ parsed }) {
   return (
-    <section className="surface-card p-6">
+    <Card delay={0.2}>
       <p className="section-heading">Parsed Resume Review</p>
       <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
         Extraction complete for <span className="font-semibold">{parsed.fileName}</span>.
@@ -349,14 +351,13 @@ function ParsedDataCard({ parsed }) {
       </div>
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <Link
-          to="/account/profile"
-          className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Edit Profile
+        <Link to="/account/profile">
+          <Button variant="primary">
+            Edit Profile
+          </Button>
         </Link>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -680,7 +681,7 @@ export default function CandidateDashboard() {
   return (
     <PageFrame size="standard">
       <div className="space-y-6">
-      <section className="surface-card p-6 sm:p-8">
+      <Card delay={0}>
         <p className="section-heading">Candidate Portal</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
           Resume Upload and Parsing Feedback
@@ -689,7 +690,7 @@ export default function CandidateDashboard() {
           Upload your latest resume. We will simulate document upload, AI parsing,
           and show extracted skills, experience, and education for review.
         </p>
-      </section>
+      </Card>
 
       {hasUnreadUpdates ? (
         <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
@@ -735,7 +736,7 @@ export default function CandidateDashboard() {
 
       {parsedData ? <ParsedDataCard parsed={parsedData} /> : null}
 
-      <section className="surface-card p-6 sm:p-8">
+      <Card delay={0.2}>
         <p className="section-heading">My Onboarding Documents</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
           Digital 201 Files (Onboarding Docs)
@@ -770,9 +771,9 @@ export default function CandidateDashboard() {
             {docNotice}
           </div>
         ) : null}
-      </section>
+      </Card>
 
-      <section className="surface-card p-6 sm:p-8">
+      <Card delay={0.3}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="section-heading">Document Grid</p>
           <p className="text-xs text-slate-500">
@@ -795,9 +796,9 @@ export default function CandidateDashboard() {
             />
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="surface-card p-6 sm:p-8">
+      <Card delay={0.4}>
         <p className="section-heading">Checklist</p>
         <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
           Required 201 Document Checklist
@@ -848,7 +849,7 @@ export default function CandidateDashboard() {
             );
           })}
         </div>
-      </section>
+      </Card>
       </div>
     </PageFrame>
   );

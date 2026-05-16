@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useAdminData } from "../../context/AdminDataContext";
 import { rolePermissions } from "../../lib/adminMockData";
+import { getRoleDisplayLabel } from "../../lib/roles";
 
 function formatNumber(value) {
   return new Intl.NumberFormat().format(value);
@@ -98,7 +99,7 @@ export default function AdminUsers() {
       return;
     }
 
-    setNotice({ type: "success", message: `${user.name} was updated to ${nextRole}.` });
+    setNotice({ type: "success", message: `${user.name} privileges updated to ${getRoleDisplayLabel(nextRole)}.` });
   };
 
   const handleArchiveUser = (user) => {
