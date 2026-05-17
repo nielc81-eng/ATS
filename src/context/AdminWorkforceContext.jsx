@@ -30,12 +30,14 @@ import {
   updateTalentStatus,
   updateDeploymentRequest,
   convertDeploymentRequestToAssignment,
+  ensureAdminWorkforceSeedData,
 } from "../lib/adminWorkforceMockData";
 
 const AdminWorkforceContext = createContext(null);
 
 export function AdminWorkforceProvider({ children }) {
   const { session } = useAuth();
+  ensureAdminWorkforceSeedData();
   const [talentPool, setTalentPool] = useState(() => getTalentPoolRecords());
   const [assignments, setAssignments] = useState(() => getDeploymentAssignments());
   const [requests, setRequests] = useState(() => getDeploymentRequests());

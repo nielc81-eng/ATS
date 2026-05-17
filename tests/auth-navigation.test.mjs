@@ -112,7 +112,6 @@ test("navigation conformance: TA, deployment manager, and admin menus match the 
   assert.deepEqual(adminLinks, [
     "/admin/dashboard",
     "/admin/users",
-    "/admin/roles-and-privileges",
     "/admin/policies",
     "/admin/audit",
     "/admin/reports",

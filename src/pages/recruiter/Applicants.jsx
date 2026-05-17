@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import { getApplicationStatusLabel } from "../../lib/applicationStatuses";
-
-const PAGE_SIZE = 10;
+import Pagination from "../../components/ui/Pagination";
+import { paginate } from "../../lib/pagination";
+import { usePaginationSearchParams } from "../../lib/usePaginationSearchParams";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -23,7 +24,9 @@ export default function RecruiterApplicants() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
   const [category, setCategory] = useState("All");
-  const [page, setPage] = useState(1);
+  const { page, pageSize, setPage, resetPage } = usePaginationSearchParams({
+    defaultPageSize: 10,
+  });
 
   const categoryCounts = useMemo(() => getCategoryApplicantCounts(), [getCategoryApplicantCounts]);
   const categories = useMemo(
@@ -54,9 +57,16 @@ export default function RecruiterApplicants() {
       .sort((left, right) => toDateValue(right.updatedOn || right.appliedOn) - toDateValue(left.updatedOn || left.appliedOn));
   }, [scopedApplications, search, status]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pagination = useMemo(
+    () => paginate(filtered, { page, pageSize }),
+    [filtered, page, pageSize]
+  );
+
+  useEffect(() => {
+    if (pagination.page !== page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page, setPage]);
 
   return (
     <PageFrame size="wide">
@@ -77,7 +87,7 @@ export default function RecruiterApplicants() {
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
-                setPage(1);
+                resetPage();
               }}
               placeholder="Search applicant, job, or status"
               className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
@@ -86,7 +96,7 @@ export default function RecruiterApplicants() {
               value={status}
               onChange={(event) => {
                 setStatus(event.target.value);
-                setPage(1);
+                resetPage();
               }}
               className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
@@ -101,7 +111,7 @@ export default function RecruiterApplicants() {
                 value={category}
                 onChange={(event) => {
                   setCategory(event.target.value);
-                  setPage(1);
+                  resetPage();
                 }}
                 className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               >
@@ -137,13 +147,13 @@ export default function RecruiterApplicants() {
               </thead>
               <AnimatePresence mode="wait">
                 <motion.tbody
-                  key={`${status}-${category}-${search}-${page}`}
+                  key={`${status}-${category}-${search}-${pagination.page}-${pagination.pageSize}`}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {paged.map((item) => (
+                  {pagination.pageItems.map((item) => (
                     <tr key={item.id} className="border-t border-slate-100">
                       <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
                         {item.candidateName}
@@ -166,7 +176,7 @@ export default function RecruiterApplicants() {
                       </td>
                     </tr>
                   ))}
-                  {paged.length === 0 ? (
+                  {pagination.pageItems.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-500">
                         No applicants matched the selected filters.
@@ -177,29 +187,17 @@ export default function RecruiterApplicants() {
               </AnimatePresence>
             </table>
           </div>
-          <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
-            <p className="text-xs text-slate-500">
-              Page {safePage} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.max(1, value - 1))}
-                disabled={safePage <= 1}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-                disabled={safePage >= totalPages}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+
+          <Pagination
+            label="Applicants"
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            pageSize={pagination.pageSize}
+            totalItems={pagination.totalItems}
+            onPrev={() => setPage(pagination.page - 1)}
+            onNext={() => setPage(pagination.page + 1)}
+            onPageChange={(next) => setPage(next)}
+          />
         </section>
       </div>
     </PageFrame>

@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import TagInput from "../../components/recruiter/TagInput";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import Pagination from "../../components/ui/Pagination";
+import { paginate } from "../../lib/pagination";
+import { usePaginationSearchParams } from "../../lib/usePaginationSearchParams";
 
 const initialForm = {
   title: "",
@@ -60,6 +63,7 @@ export default function RecruiterJobs() {
   const [notice, setNotice] = useState("");
   const [skillCatalog, setSkillCatalog] = useState({ allSkills: [], categories: [] });
   const { jobs, addJob, updateJob, deleteJob } = useRecruitmentData();
+  const { page, pageSize, setPage } = usePaginationSearchParams({ defaultPageSize: 10 });
 
   useEffect(() => {
     fetch("/skills/skills.json")
@@ -83,6 +87,14 @@ export default function RecruiterJobs() {
     }),
     [jobs]
   );
+
+  const pagination = useMemo(() => paginate(jobs, { page, pageSize }), [jobs, page, pageSize]);
+
+  useEffect(() => {
+    if (pagination.page !== page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page, setPage]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -418,7 +430,7 @@ export default function RecruiterJobs() {
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((job) => (
+                {pagination.pageItems.map((job) => (
                   <tr key={job.id} className="border-t border-slate-100">
                     <td className="px-6 py-4">
                       <p className="font-medium text-slate-900">{job.title}</p>
@@ -478,6 +490,17 @@ export default function RecruiterJobs() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            label="Jobs"
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            pageSize={pagination.pageSize}
+            totalItems={pagination.totalItems}
+            onPrev={() => setPage(pagination.page - 1)}
+            onNext={() => setPage(pagination.page + 1)}
+            onPageChange={(next) => setPage(next)}
+          />
         </section>
       </div>
     </PageFrame>

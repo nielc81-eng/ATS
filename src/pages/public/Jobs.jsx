@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import Pagination from "../../components/ui/Pagination";
+import { paginate } from "../../lib/pagination";
+import { usePaginationSearchParams } from "../../lib/usePaginationSearchParams";
 
 function formatDate(value) {
   if (!value) return "-";
@@ -29,6 +32,9 @@ export default function PublicJobsBoard() {
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
+  const { page, pageSize, setPage, setPageSize, resetPage } = usePaginationSearchParams({
+    defaultPageSize: 12,
+  });
   const isCandidate = isAuthenticated && session?.role === "Candidate";
   const isRecruiter = isAuthenticated && session?.role === "Recruiter";
 
@@ -64,6 +70,17 @@ export default function PublicJobsBoard() {
 
     return sortJobs(filtered, sortBy);
   }, [department, jobs, search, sortBy]);
+
+  const pagination = useMemo(
+    () => paginate(visibleJobs, { page, pageSize }),
+    [page, pageSize, visibleJobs]
+  );
+
+  useEffect(() => {
+    if (pagination.page !== page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page, setPage]);
 
   return (
     <div className="space-y-6">
@@ -135,7 +152,10 @@ export default function PublicJobsBoard() {
             <input
               id="jobs-search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                resetPage();
+              }}
               placeholder="Title, skills, ID"
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
@@ -148,7 +168,10 @@ export default function PublicJobsBoard() {
             <select
               id="jobs-department"
               value={department}
-              onChange={(event) => setDepartment(event.target.value)}
+              onChange={(event) => {
+                setDepartment(event.target.value);
+                resetPage();
+              }}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               {departments.map((item) => (
@@ -166,7 +189,10 @@ export default function PublicJobsBoard() {
             <select
               id="jobs-sort"
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
+              onChange={(event) => {
+                setSortBy(event.target.value);
+                resetPage();
+              }}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             >
               <option value="newest">Newest</option>
@@ -177,8 +203,8 @@ export default function PublicJobsBoard() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {visibleJobs.length > 0 ? (
-          visibleJobs.map((job) => (
+        {pagination.pageItems.length > 0 ? (
+          pagination.pageItems.map((job) => (
             <article key={job.id} className="surface-card p-5">
               <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{job.id}</p>
               <h2 className="mt-2 text-lg font-semibold text-slate-950">{job.title}</h2>
@@ -216,6 +242,21 @@ export default function PublicJobsBoard() {
             No jobs matched your filters.
           </div>
         )}
+      </section>
+
+      <section className="surface-card overflow-hidden">
+        <Pagination
+          label="Jobs"
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          pageSize={pagination.pageSize}
+          totalItems={pagination.totalItems}
+          onPrev={() => setPage(pagination.page - 1)}
+          onNext={() => setPage(pagination.page + 1)}
+          onPageChange={(next) => setPage(next)}
+          pageSizeOptions={[12, 24, 48]}
+          onPageSizeChange={(next) => setPageSize(next)}
+        />
       </section>
     </div>
   );

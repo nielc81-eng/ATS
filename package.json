@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --configLoader native",
     "build": "vite build --configLoader native",
     "test": "node --test tests/*.test.mjs",
-    "preview": "vite preview",
+    "preview": "vite preview --configLoader native",
     "sync:skills": "node scripts/sync-skills-from-markdown.mjs"
   },
   "dependencies": {

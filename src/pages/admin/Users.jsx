@@ -1,9 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { useAdminData } from "../../context/AdminDataContext";
 import { rolePermissions } from "../../lib/adminMockData";
 import { getRoleDisplayLabel } from "../../lib/roles";
+import Pagination from "../../components/ui/Pagination";
+import { paginate } from "../../lib/pagination";
+import { usePaginationSearchParams } from "../../lib/usePaginationSearchParams";
 
 function formatNumber(value) {
   return new Intl.NumberFormat().format(value);
@@ -53,6 +56,9 @@ export default function AdminUsers() {
   const [notice, setNotice] = useState({ type: "", message: "" });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Active");
+  const { page, pageSize, setPage, setPageSize, resetPage } = usePaginationSearchParams({
+    defaultPageSize: 15,
+  });
   const [archiveDialog, setArchiveDialog] = useState({
     open: false,
     user: null,
@@ -92,6 +98,17 @@ export default function AdminUsers() {
       return matchesStatus && matchesSearch;
     });
   }, [search, statusFilter, users]);
+
+  const pagination = useMemo(
+    () => paginate(filteredUsers, { page, pageSize }),
+    [filteredUsers, page, pageSize]
+  );
+
+  useEffect(() => {
+    if (pagination.page !== page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page, setPage]);
 
   const handleRoleChange = (user, nextRole) => {
     const result = updateUserRole(user.email, nextRole);
@@ -196,7 +213,10 @@ export default function AdminUsers() {
             <input
               id="user-search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                resetPage();
+              }}
               placeholder="Search name, email, role, or archive note"
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
             />
@@ -209,7 +229,10 @@ export default function AdminUsers() {
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setStatusFilter(value)}
+                  onClick={() => {
+                    setStatusFilter(value);
+                    resetPage();
+                  }}
                   className={[
                     "rounded-xl px-3 py-2 text-xs font-semibold transition sm:text-sm",
                     active ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900",
@@ -266,14 +289,14 @@ export default function AdminUsers() {
             </thead>
             <AnimatePresence mode="wait">
               <motion.tbody
-                key={statusFilter}
+                key={`${statusFilter}-${search}-${pagination.page}-${pagination.pageSize}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
                 className="divide-y divide-slate-200 bg-white"
               >
-              {filteredUsers.map((user) => (
+              {pagination.pageItems.map((user) => (
                 <tr key={user.email} className={user.status === "Archived" ? "bg-amber-50/30" : ""}>
                   <td className="px-6 py-4 align-top">
                     <div className="text-sm font-semibold text-slate-950">{user.name}</div>
@@ -352,6 +375,19 @@ export default function AdminUsers() {
             </AnimatePresence>
           </table>
         </div>
+
+        <Pagination
+          label="Users"
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          pageSize={pagination.pageSize}
+          totalItems={pagination.totalItems}
+          onPrev={() => setPage(pagination.page - 1)}
+          onNext={() => setPage(pagination.page + 1)}
+          onPageChange={(next) => setPage(next)}
+          pageSizeOptions={[15, 30, 50]}
+          onPageSizeChange={(next) => setPageSize(next)}
+        />
       </section>
 
       {archiveDialog.open ? (

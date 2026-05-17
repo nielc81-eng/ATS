@@ -12,6 +12,12 @@ export const navigationByRole = {
       icon: "LayoutDashboard",
     },
     {
+      label: "Profile",
+      to: "/candidate/profile",
+      hint: "Manage your profile",
+      icon: "UserRound",
+    },
+    {
       label: "Browse Jobs",
       to: "/jobs",
       hint: "Public opportunities",

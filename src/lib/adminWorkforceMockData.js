@@ -1,4 +1,4 @@
-import { recordAdminAuditEvent } from "./adminMockData";
+import { recordAdminAuditEvent } from "./adminMockData.js";
 
 export const TALENT_POOL_STORAGE_KEY = "ai_resume_screening_admin_talent_pool_v1";
 export const DEPLOYMENT_ASSIGNMENTS_STORAGE_KEY =
@@ -1126,4 +1126,151 @@ export function getTalentWorkforceSnapshot() {
     pendingRequests: requests.filter((request) => request.status === "Pending Approval"),
     deployed: pool.filter((record) => record.status === "Deployed"),
   };
+}
+
+function hasSeedableStorageValue(key) {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function addDaysIsoDate(daysFromNow) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  return date.toISOString().slice(0, 10);
+}
+
+export function ensureAdminWorkforceSeedData(actor = "System") {
+  if (typeof window === "undefined") return;
+
+  const alreadyHasData =
+    hasSeedableStorageValue(TALENT_POOL_STORAGE_KEY) ||
+    hasSeedableStorageValue(DEPLOYMENT_REQUESTS_STORAGE_KEY) ||
+    hasSeedableStorageValue(DEPLOYMENT_ASSIGNMENTS_STORAGE_KEY);
+
+  if (alreadyHasData) return;
+
+  const sources = [
+    {
+      jobId: "JOB-OPS-01",
+      jobTitle: "Field Technician",
+      department: "Operations",
+      candidateName: "Marco Reyes",
+      candidateEmail: "marco.reyes@demo.com",
+      skills: ["Safety", "Logistics", "Maintenance"],
+      score: 91,
+      yearsExperience: 6,
+      matchContext: "Strong operations fit; ready for field deployment.",
+    },
+    {
+      jobId: "JOB-IT-02",
+      jobTitle: "Network Engineer",
+      department: "IT",
+      candidateName: "Aisha Khan",
+      candidateEmail: "aisha.khan@demo.com",
+      skills: ["Networking", "Cisco", "Troubleshooting"],
+      score: 86,
+      yearsExperience: 5,
+      matchContext: "Good technical baseline; awaiting onboarding clearance.",
+      seedStatus: "On Hold",
+    },
+    {
+      jobId: "JOB-ENG-03",
+      jobTitle: "Project Coordinator",
+      department: "Engineering",
+      candidateName: "Lia Chen",
+      candidateEmail: "lia.chen@demo.com",
+      skills: ["Planning", "Stakeholder Mgmt", "Reporting"],
+      score: 88,
+      yearsExperience: 4,
+      matchContext: "Client-ready coordinator for engineering delivery teams.",
+    },
+    {
+      jobId: "JOB-COMP-04",
+      jobTitle: "Compliance Specialist",
+      department: "Compliance",
+      candidateName: "Noah Cruz",
+      candidateEmail: "noah.cruz@demo.com",
+      skills: ["Audits", "Documentation", "Risk"],
+      score: 83,
+      yearsExperience: 3,
+      matchContext: "Strong attention to detail; suitable for records compliance.",
+    },
+  ];
+
+  const addedTalent = sources
+    .map((source) => {
+      const result = addTalentToPool(
+        source,
+        {
+          status: source.seedStatus || "Ready",
+          roleFit: source.jobTitle,
+          location: "Remote",
+        },
+        actor
+      );
+      return result.ok ? result.record : null;
+    })
+    .filter(Boolean);
+
+  const marco = addedTalent.find((record) => record.candidateEmail === "marco.reyes@demo.com");
+  const lia = addedTalent.find((record) => record.candidateEmail === "lia.chen@demo.com");
+
+  if (marco) {
+    const request = createDeploymentRequest(
+      marco.id,
+      {
+        targetType: "Project",
+        targetName: "Project Aurora",
+        urgency: "High",
+        startDate: addDaysIsoDate(0),
+        endDate: addDaysIsoDate(10),
+        justification: "Expedite field readiness for upcoming client go-live.",
+        requester: "Demo Recruiter",
+        requesterEmail: "recruiter@demo.com",
+        requesterRole: "Recruiter",
+      },
+      actor
+    );
+
+    if (request.ok) {
+      submitDeploymentRequest(request.request.id, actor);
+    }
+  }
+
+  if (lia) {
+    const request = createDeploymentRequest(
+      lia.id,
+      {
+        targetType: "Project",
+        targetName: "Client Solace",
+        urgency: "Medium",
+        startDate: addDaysIsoDate(-3),
+        endDate: addDaysIsoDate(24),
+        justification: "Backfill coordinator role for active engineering engagement.",
+        requester: "Demo Recruiter",
+        requesterEmail: "recruiter@demo.com",
+        requesterRole: "Recruiter",
+      },
+      actor
+    );
+
+    if (request.ok) {
+      submitDeploymentRequest(request.request.id, actor);
+      approveDeploymentRequest(
+        request.request.id,
+        {
+          materializeImmediately: true,
+          approvalNotes: "Approved for deployment assignment seeding.",
+        },
+        actor
+      );
+    }
+  }
 }

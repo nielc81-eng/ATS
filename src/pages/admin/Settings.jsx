@@ -27,12 +27,6 @@ export default function AdminSettings() {
         >
           Recruitment and AI Policies
         </Link>
-        <Link
-          to="/admin/roles-and-privileges"
-          className="rounded-3xl border border-slate-200 bg-white px-5 py-5 text-sm font-semibold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
-        >
-          Roles and Privileges
-        </Link>
       </section>
     </div>
   );

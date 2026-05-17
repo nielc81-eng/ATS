@@ -4,7 +4,7 @@ import {
   getAccounts,
   restoreAccount,
   updateAccountRole,
-} from "./mockAuthStore";
+} from "./mockAuthStore.js";
 
 export const ADMIN_AUDIT_STORAGE_KEY = "ai_resume_screening_admin_audit_events_v1";
 
