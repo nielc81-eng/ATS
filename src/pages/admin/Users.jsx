@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { useAdminData } from "../../context/AdminDataContext";
 import { rolePermissions } from "../../lib/adminMockData";
@@ -263,7 +264,15 @@ export default function AdminUsers() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
+            <AnimatePresence mode="wait">
+              <motion.tbody
+                key={statusFilter}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="divide-y divide-slate-200 bg-white"
+              >
               {filteredUsers.map((user) => (
                 <tr key={user.email} className={user.status === "Archived" ? "bg-amber-50/30" : ""}>
                   <td className="px-6 py-4 align-top">
@@ -339,7 +348,8 @@ export default function AdminUsers() {
                   </td>
                 </tr>
               ) : null}
-            </tbody>
+              </motion.tbody>
+            </AnimatePresence>
           </table>
         </div>
       </section>

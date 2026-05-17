@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 
@@ -146,9 +147,16 @@ export default function RecruiterApplicantCategories() {
                       <th className="px-4 py-3 font-medium">Updated</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {selectedCategoryApplicants.map((applicant) => (
-                      <tr key={applicant.applicationId} className="border-t border-slate-100">
+                  <AnimatePresence mode="wait">
+                    <motion.tbody
+                      key={selectedCategory}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {selectedCategoryApplicants.map((applicant) => (
+                        <tr key={applicant.applicationId} className="border-t border-slate-100">
                         <td className="px-4 py-3 font-medium text-slate-900">{applicant.candidateName}</td>
                         <td className="px-4 py-3 text-slate-600">{applicant.applicationId}</td>
                         <td className="px-4 py-3 text-slate-700">
@@ -160,7 +168,8 @@ export default function RecruiterApplicantCategories() {
                         <td className="px-4 py-3 text-slate-700">{formatDate(applicant.updatedOn)}</td>
                       </tr>
                     ))}
-                  </tbody>
+                  </motion.tbody>
+                  </AnimatePresence>
                 </table>
               </div>
             ) : (

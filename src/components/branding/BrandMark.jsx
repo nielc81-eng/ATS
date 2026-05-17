@@ -1,89 +1,95 @@
 import React from "react";
 
 /**
- * BrandMark — Enterprise-grade logomark.
- * Renders a geometric SVG mark + wordmark. No emoji, no plain text initials.
+ * BrandMark — Enterprise logomark.
+ *
+ * Usage contexts:
+ *  <BrandMark />               — light sidebar / landing, full mark + name
+ *  <BrandMark compact />       — collapsed sidebar / navbar, icon only
+ *  <BrandMark inverse />       — dark sidebar, white-on-dark rendering
+ *  <BrandMark compact inverse />  — collapsed dark sidebar
  */
 export default function BrandMark({ compact = false, inverse = false }) {
+  // Color tokens driven by inverse flag
+  const bg     = inverse ? "rgba(255,255,255,0.10)" : "#0f172a";
+  const bgRing = inverse ? "rgba(255,255,255,0.14)" : "transparent";
+  const mark   = inverse ? "#ffffff" : "#ffffff";
+  const accent = inverse ? "#818cf8" : "#6366f1";
+
   return (
     <div className="flex items-center gap-2.5 select-none">
-      {/* Logomark — geometric SVG */}
+
+      {/* ── Logomark ── */}
       <div
         className="relative flex-none"
         style={{
-          width: 32,
-          height: 32,
+          width: 34,
+          height: 34,
+          borderRadius: 10,
+          background: bg,
+          boxShadow: inverse
+            ? "0 0 0 1px rgba(255,255,255,0.12), 0 2px 8px rgba(0,0,0,0.25)"
+            : "0 0 0 1px rgba(15,23,42,0.12), 0 2px 6px rgba(15,23,42,0.18)",
         }}
       >
         <svg
-          width="32"
-          height="32"
-          viewBox="0 0 32 32"
+          width="34"
+          height="34"
+          viewBox="0 0 34 34"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
-          {/* Outer square with rounded corners */}
-          <rect
-            width="32"
-            height="32"
-            rx="8"
-            fill={inverse ? "#ffffff" : "#0f172a"}
-          />
-          {/* Inner geometric mark — abstract "A" / upward arrow form */}
           {/* Left bar */}
           <rect
-            x="8"
-            y="22"
+            x="9"
+            y="23"
             width="3"
             height="10"
             rx="1.5"
-            fill={inverse ? "#0f172a" : "#ffffff"}
-            transform="rotate(-38 8 22)"
+            fill={mark}
+            transform="rotate(-38 9 23)"
           />
           {/* Right bar */}
           <rect
-            x="21"
-            y="22"
+            x="22"
+            y="23"
             width="3"
             height="10"
             rx="1.5"
-            fill={inverse ? "#0f172a" : "#ffffff"}
-            transform="rotate(38 24 22)"
+            fill={mark}
+            transform="rotate(38 25 23)"
           />
-          {/* Cross bar */}
+          {/* Cross bar — indigo accent */}
           <rect
-            x="11"
-            y="17"
+            x="12"
+            y="18"
             width="10"
             height="2.5"
             rx="1.25"
-            fill={inverse ? "#0f172a" : "#6366f1"}
+            fill={accent}
           />
-          {/* Top dot */}
+          {/* Top pip */}
           <circle
-            cx="16"
-            cy="8.5"
-            r="2"
-            fill={inverse ? "#0f172a" : "#818cf8"}
+            cx="17"
+            cy="9"
+            r="2.25"
+            fill={inverse ? "rgba(255,255,255,0.55)" : "#818cf8"}
           />
         </svg>
       </div>
 
-      {/* Wordmark */}
+      {/* ── Wordmark (only when not compact) ── */}
       {!compact && (
-        <div>
+        <div className="min-w-0">
           <div
-            className="text-[13px] font-bold leading-tight tracking-tight"
-            style={{ color: inverse ? "#ffffff" : "#0f172a", letterSpacing: "-0.02em" }}
+            className="text-[14px] font-bold leading-none tracking-tight truncate"
+            style={{
+              color: inverse ? "#ffffff" : "#0f172a",
+              letterSpacing: "-0.025em",
+            }}
           >
-            ATS Platform
-          </div>
-          <div
-            className="text-[10px] font-medium leading-none mt-0.5"
-            style={{ color: inverse ? "rgba(255,255,255,0.4)" : "#94a3b8", letterSpacing: "0.01em" }}
-          >
-            Recruitment workspace
+            Talent<span style={{ color: accent }}>Vault</span>
           </div>
         </div>
       )}

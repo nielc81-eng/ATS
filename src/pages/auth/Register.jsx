@@ -196,71 +196,7 @@ export default function Register() {
                 each user lands on a focused dashboard after sign-up.
               </motion.p>
 
-              {/* role comparison */}
-              <motion.div variants={fadeUp} className="mt-8 space-y-3">
-                {[
-                  {
-                    role: "Candidate",
-                    Icon: UserRound,
-                    desc: "Apply for jobs, track applications, manage your profile.",
-                    color: "bg-blue-50 border-blue-200",
-                    tag: "bg-blue-100 text-blue-700",
-                    iconBg: "rgba(37,99,235,0.08)",
-                    iconColor: "#2563eb",
-                    iconBorder: "rgba(37,99,235,0.15)",
-                  },
-                  {
-                    role: "Talent Acquisition",
-                    Icon: Building2,
-                    desc: "Post jobs, review AI-ranked applicants, manage your pipeline.",
-                    color: "bg-violet-50 border-violet-200",
-                    tag: "bg-violet-100 text-violet-700",
-                    iconBg: "rgba(124,58,237,0.08)",
-                    iconColor: "#7c3aed",
-                    iconBorder: "rgba(124,58,237,0.15)",
-                  },
-                ].map((r) => (
-                  <motion.div
-                    key={r.role}
-                    whileHover={{ x: 4 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                    className={`flex items-start gap-3.5 rounded-2xl border p-4 transition ${r.color}`}
-                  >
-                    {/* Icon tile */}
-                    <div
-                      className="flex-none mt-0.5"
-                      style={{
-                        display: "inline-flex",
-                        padding: "4px",
-                        borderRadius: "0.625rem",
-                        background: "rgba(255,255,255,0.8)",
-                        border: "1px solid rgba(15,23,42,0.07)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: "1.75rem",
-                          height: "1.75rem",
-                          borderRadius: "0.375rem",
-                          background: r.iconBg,
-                          border: `1px solid ${r.iconBorder}`,
-                        }}
-                      >
-                        <r.Icon size={14} strokeWidth={1.75} style={{ color: r.iconColor }} />
-                      </div>
-                    </div>
-                    <div>
-                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${r.tag}`}>
-                        {r.role}
-                      </span>
-                      <p className="mt-1 text-sm text-slate-600">{r.desc}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
+
             </motion.div>
 
             <motion.div

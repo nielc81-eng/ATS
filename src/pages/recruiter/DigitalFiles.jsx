@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import DigitalFileCard from "../../components/digitalFiles/DigitalFileCard";
 import DigitalFileDetailPanel from "../../components/digitalFiles/DigitalFileDetailPanel";
 import { useRecruiterDocsInbox } from "../../context/RecruiterDocsInboxContext";
@@ -246,8 +247,16 @@ export default function RecruiterDigitalFiles() {
         </div>
       </section>
 
-      {activeTab === "vault" ? (
-        <>
+      <AnimatePresence mode="wait">
+        {activeTab === "vault" ? (
+          <motion.div
+            key="vault"
+            className="space-y-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
           <section className="surface-card p-6 sm:p-8">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-[16rem] flex-1">
@@ -345,9 +354,16 @@ export default function RecruiterDigitalFiles() {
               onAttachMockFile={handleAttachMockFile}
             />
           </section>
-        </>
-      ) : (
-        <>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="inbox"
+            className="space-y-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
           <section className="surface-card p-6 sm:p-8">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="min-w-[16rem] flex-1">
@@ -511,8 +527,9 @@ export default function RecruiterDigitalFiles() {
               </div>
             )}
           </section>
-        </>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

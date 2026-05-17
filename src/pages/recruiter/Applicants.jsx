@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import { getApplicationStatusLabel } from "../../lib/applicationStatuses";
@@ -134,38 +135,46 @@ export default function RecruiterApplicants() {
                   <th className="whitespace-nowrap px-6 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {paged.map((item) => (
-                  <tr key={item.id} className="border-t border-slate-100">
-                    <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
-                      {item.candidateName}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-slate-600">{item.id}</td>
-                    <td className="px-6 py-4 text-slate-700">{item.jobTitle}</td>
-                    <td className="whitespace-nowrap px-6 py-4 text-slate-700">
-                      {getApplicationStatusLabel(item.status)}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-slate-600">
-                      {item.updatedOn || item.appliedOn || "-"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        to={`/recruiter/jobs/${encodeURIComponent(item.jobId)}/screening`}
-                        className="inline-flex whitespace-nowrap rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-400"
-                      >
-                        Open Job Screening
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {paged.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-500">
-                      No applicants matched the selected filters.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
+              <AnimatePresence mode="wait">
+                <motion.tbody
+                  key={`${status}-${category}-${search}-${page}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {paged.map((item) => (
+                    <tr key={item.id} className="border-t border-slate-100">
+                      <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
+                        {item.candidateName}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-slate-600">{item.id}</td>
+                      <td className="px-6 py-4 text-slate-700">{item.jobTitle}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-slate-700">
+                        {getApplicationStatusLabel(item.status)}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                        {item.updatedOn || item.appliedOn || "-"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Link
+                          to={`/recruiter/jobs/${encodeURIComponent(item.jobId)}/screening`}
+                          className="inline-flex whitespace-nowrap rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                        >
+                          Open Job Screening
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {paged.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-500">
+                        No applicants matched the selected filters.
+                      </td>
+                    </tr>
+                  ) : null}
+                </motion.tbody>
+              </AnimatePresence>
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">

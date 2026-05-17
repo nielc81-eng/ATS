@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   APPLICATION_STATUS,
   getApplicationStatusLabel,
@@ -149,7 +150,7 @@ export default function CandidateProfileModal({
   const currentStatus = application?.status || APPLICATION_STATUS.Submitted;
   const latestUpdated = application?.updatedOn || application?.appliedOn || "";
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
@@ -158,8 +159,8 @@ export default function CandidateProfileModal({
         onClick={onClose}
       />
 
-      <section className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 sm:px-8">
+      <section className="relative z-10 mx-auto flex w-full max-w-5xl flex-col max-h-[90vh] overflow-hidden rounded-[2rem] bg-white shadow-[0_30px_120px_rgba(15,23,42,0.25)]">
+        <div className="flex-none flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 sm:px-8">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Candidate Profile</p>
             <h2 className="mt-2 text-2xl font-semibold text-slate-950">
@@ -181,8 +182,9 @@ export default function CandidateProfileModal({
           </div>
         </div>
 
-        <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="space-y-5">
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="space-y-5">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-900">Technical Skills</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -225,9 +227,9 @@ export default function CandidateProfileModal({
                 Validate skill overlap and timeline notes before moving candidates through the compliance and interview gate.
               </p>
             </div>
-          </div>
+            </div>
 
-          <aside className="space-y-4">
+            <aside className="space-y-4">
             <div className="rounded-3xl border border-slate-200 p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -247,7 +249,7 @@ export default function CandidateProfileModal({
                     getStatusTone(currentStatus),
                   ].join(" ")}
                 >
-                  {currentStatus}
+                  {getApplicationStatusLabel(currentStatus)}
                 </span>
               </div>
 
@@ -339,9 +341,11 @@ export default function CandidateProfileModal({
                 )}
               </div>
             </div>
-          </aside>
+            </aside>
+          </div>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import { NavLink, Outlet, useParams } from "react-router-dom";
+import { NavLink, useOutlet, useParams, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 
@@ -14,6 +15,8 @@ function tabClassName({ isActive }) {
 
 export default function RecruiterJobModuleLayout() {
   const { jobId = "" } = useParams();
+  const location = useLocation();
+  const currentOutlet = useOutlet();
   const { getJobById } = useRecruitmentData();
 
   const job = useMemo(() => getJobById(jobId), [getJobById, jobId]);
@@ -45,7 +48,17 @@ export default function RecruiterJobModuleLayout() {
             </NavLink>
           </div>
         </section>
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {currentOutlet}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </PageFrame>
   );
