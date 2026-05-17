@@ -40,10 +40,6 @@ export default function AdminLayout() {
 
           <main className="py-6">
             <ShellContainer>
-              <div className="mb-6 rounded-3xl border border-cyan-200 bg-cyan-50 px-5 py-4 text-sm text-cyan-900">
-                Signed in as <span className="font-semibold">{session?.name || "Administrator"}</span>.{" "}
-                Platform oversight routes are isolated under <span className="font-semibold">/admin</span>.
-              </div>
               <Outlet />
             </ShellContainer>
           </main>

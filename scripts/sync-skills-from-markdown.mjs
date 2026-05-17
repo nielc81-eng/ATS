@@ -46,16 +46,16 @@ function main() {
   }
 
   const files = fs
-    .readdirSync(sourceDir, { withFileTypes: true })
+    .readdirSync(sourceDir, { withFileTypes: true, recursive: true })
     .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
     .map((entry) => entry.name);
 
-  const categories = files.map((name) => {
-    const fullPath = path.join(sourceDir, name);
+  const categories = files.map((entry) => {
+    const fullPath = path.join(entry.parentPath || entry.path || sourceDir, entry.name);
     const content = fs.readFileSync(fullPath, "utf8");
     return {
-      category: toCategoryName(name),
-      fileName: name,
+      category: toCategoryName(entry.name),
+      fileName: entry.name,
       skills: ensureArray(parseMarkdownSkills(content)),
     };
   });

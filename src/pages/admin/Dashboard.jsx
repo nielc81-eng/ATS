@@ -1,43 +1,21 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { PageFrame } from "../../components/layout/ShellPrimitives";
+import { PageFrame, PageHeader } from "../../components/layout/ShellPrimitives";
 import { useAdminData } from "../../context/AdminDataContext";
 import { useDigitalFiles } from "../../context/DigitalFilesContext";
 import { useRecruiterDocsInbox } from "../../context/RecruiterDocsInboxContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 
+import { MetricCard } from "../../components/widgets/MetricCard";
+import { HorizontalBarChart } from "../../components/widgets/HorizontalBarChart";
+import { AgingQueueWidget } from "../../components/widgets/AgingQueueWidget";
+import { Users, ShieldAlert, Activity, Database, UsersRound, BarChart3, Server, ChevronRight } from 'lucide-react';
+import { calculateAgeInDays } from "../../lib/analytics/metrics";
+import { motion } from 'framer-motion';
+import { staggerContainer, sectionFadeUp } from '../../lib/motionConfig';
+
 function formatNumber(value) {
   return new Intl.NumberFormat().format(value);
-}
-
-function formatDateTime(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function MetricCard({ label, value, note, tone = "slate" }) {
-  const tones = {
-    slate: "border-slate-200 bg-white text-slate-950",
-    cyan: "border-cyan-200 bg-cyan-50 text-cyan-950",
-    amber: "border-amber-200 bg-amber-50 text-amber-950",
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-950",
-  };
-
-  return (
-    <article className={["rounded-3xl border p-5 shadow-sm", tones[tone]].join(" ")}>
-      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold">{value}</p>
-      {note ? <p className="mt-2 text-sm text-slate-600">{note}</p> : null}
-    </article>
-  );
 }
 
 export default function AdminDashboard() {
@@ -76,174 +54,172 @@ export default function AdminDashboard() {
     };
   }, [allApplications, files, items, jobs, users]);
 
-  const recentEvents = auditEvents.slice(0, 6);
-  const flaggedFiles = files.filter((file) => file.status === "Needs Action").slice(0, 3);
+  const recentEvents = auditEvents.slice(0, 8);
+  const flaggedFiles = files.filter((file) => file.status === "Needs Action").slice(0, 4);
   const flaggedApplications = allApplications
     .filter((application) => application.status === "Rejected")
-    .slice(0, 3);
+    .slice(0, 4);
+
+  // Widget Data Transforms
+  const roleDistribution = [
+    { label: 'Administrator', value: stats.roleCounts.Administrator, colorClass: 'bg-cyan-500' },
+    { label: 'Talent Acquisition', value: stats.roleCounts.Recruiter, colorClass: 'bg-emerald-500' },
+    { label: 'Candidate', value: stats.roleCounts.Candidate, colorClass: 'bg-slate-400' },
+  ].filter(item => item.value > 0);
+
+  const appDistArray = stats.applicationDistribution.map((item, index) => {
+    const colors = ['bg-slate-400', 'bg-blue-400', 'bg-indigo-400', 'bg-purple-400', 'bg-emerald-500', 'bg-rose-500'];
+    return {
+      label: item.status,
+      value: item.count,
+      colorClass: colors[index % colors.length]
+    };
+  }).filter(item => item.value > 0);
+
+  const complianceSignals = [
+    ...flaggedFiles.map(f => ({
+      id: f.id,
+      title: f.employeeName,
+      subtitle: `201 File - ${f.department}`,
+      age: 'Needs Action',
+      status: 'Flagged',
+      urgent: true
+    })),
+    ...flaggedApplications.map(a => ({
+      id: a.id,
+      title: a.candidateName,
+      subtitle: `Application - ${a.jobTitle}`,
+      age: 'Rejected',
+      status: 'Policy Review',
+      urgent: true
+    }))
+  ];
+
+  const recentAuditActivity = recentEvents.map(event => ({
+    id: event.id,
+    title: event.action,
+    subtitle: `${event.actor} - ${event.target || 'System'}`,
+    age: 'Recent',
+    status: event.category,
+    urgent: event.category === 'Security' || event.category === 'Policy' || event.category === 'Data'
+  }));
 
   return (
     <PageFrame size="wide">
       <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 px-6 py-6 text-white shadow-soft sm:px-8">
-        <div className="max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.22em] text-cyan-300">Administrator dashboard</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Administrator operations control center
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-            Manage staff accounts, assign work privileges, set recruitment and AI policies, monitor usage history, and run cleanup/backup tasks.
-          </p>
-        </div>
-      </section>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+        >
+          <PageHeader
+            dark
+            eyebrow="Administrator dashboard"
+            title="System Oversight &amp; Compliance"
+            description="Monitor system activity, audit volume, role distribution, and investigate flagged policy signals across all workspaces."
+          />
+        </motion.div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <MetricCard
-          label="Total users"
-          value={formatNumber(stats.totalUsers)}
-          note="Active accounts only."
-          tone="cyan"
-        />
-        <MetricCard
-          label="Jobs / applications"
-          value={`${formatNumber(stats.jobs)} / ${formatNumber(stats.applications)}`}
-          note="Talent acquisition funnel volume."
-          tone="emerald"
-        />
-        <MetricCard
-          label="Flagged items"
-          value={formatNumber(stats.flaggedItems)}
-          note="Needs-action files and rejected applications."
-          tone="amber"
-        />
-        <MetricCard
-          label="Policy watch items"
-          value={formatNumber(stats.flaggedItems)}
-          note="Data points needing policy follow-up."
-        />
-      </section>
+        <motion.section
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          <MetricCard 
+            title="Total Users" 
+            value={formatNumber(stats.totalUsers)} 
+            icon={Users} 
+            subtext="Active accounts" 
+            trendDirection="neutral"
+            accentColor="indigo"
+          />
+          <MetricCard 
+            title="Policy Watch Items" 
+            value={formatNumber(stats.flaggedItems)} 
+            icon={ShieldAlert} 
+            trend="+2 flagged" 
+            trendDirection="down"
+            accentColor="rose"
+          />
+          <MetricCard 
+            title="Audit Events (30d)" 
+            value={formatNumber(auditEvents.length)} 
+            icon={Activity} 
+            trend="+12% volume" 
+            trendDirection="neutral"
+            accentColor="sky"
+          />
+          <MetricCard 
+            title="Total Records" 
+            value={formatNumber(stats.jobs + stats.applications)} 
+            icon={Database} 
+            subtext="Jobs &amp; Applications" 
+            trendDirection="neutral"
+            accentColor="violet"
+          />
+        </motion.section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Administrators" value={formatNumber(stats.roleCounts.Administrator)} note="Seeded platform admins." />
-        <MetricCard label="Talent Acquisition" value={formatNumber(stats.roleCounts.Recruiter)} note="Hiring workspace users." />
-        <MetricCard label="Candidates" value={formatNumber(stats.roleCounts.Candidate)} note="Self-service accounts." />
-        <MetricCard label="Pending inbox" value={formatNumber(stats.pendingInbox)} note="Candidate submissions awaiting review." />
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {[
-          { label: "Manage Staff Accounts", to: "/admin/staff-accounts", note: "Manage accounts, roles, and privileges." },
-          { label: "Set Recruitment and AI Policies", to: "/admin/policies", note: "Configure policy defaults." },
-          { label: "Monitor Usage History", to: "/admin/usage-history", note: "Review platform activity timeline." },
-          { label: "System Cleanup and Data Backup", to: "/admin/system-cleanup", note: "Run cleanup review and backups." },
-        ].map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            className="rounded-3xl border border-slate-200 bg-white px-5 py-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
-          >
-            <p className="text-sm font-semibold text-slate-950">{link.label}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{link.note}</p>
-          </Link>
-        ))}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-2">
-        <article className="surface-card overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-slate-950">Application status distribution</h2>
-            <p className="mt-1 text-sm text-slate-600">A quick read on where the funnel stands.</p>
+        <motion.section
+          className="grid gap-6 xl:grid-cols-2"
+          {...sectionFadeUp}
+        >
+          <div className="space-y-6">
+            <HorizontalBarChart title="System Role Distribution" data={roleDistribution} />
+            <HorizontalBarChart title="Cross-Workspace Application Mix" data={appDistArray} />
           </div>
-          <div className="grid gap-3 p-6 sm:grid-cols-2">
-            {stats.applicationDistribution.map((item) => (
-              <div key={item.status} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.status}</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">{formatNumber(item.count)}</p>
-              </div>
-            ))}
+          <div className="space-y-6">
+            <AgingQueueWidget title="Policy & Compliance Signals" items={complianceSignals} emptyMessage="No flagged items needing policy review." />
           </div>
-        </article>
+        </motion.section>
 
-        <article className="surface-card overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-slate-950">Recent audit activity</h2>
-            <p className="mt-1 text-sm text-slate-600">Newest entries from the admin log.</p>
+        <motion.section className="grid gap-6 xl:grid-cols-3" {...sectionFadeUp}>
+          <div className="xl:col-span-2">
+            <AgingQueueWidget title="Recent Audit Activity" items={recentAuditActivity} emptyMessage="No recent events." />
           </div>
-          <div className="space-y-3 p-6">
-            {recentEvents.length > 0 ? (
-              recentEvents.map((event) => (
-                <div key={event.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{event.action}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {event.actor} - {event.target || "No target"}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-                      {event.category}
+          <div className="space-y-3">
+            <p className="section-heading px-1">Management Tools</p>
+            <div className="grid gap-2.5">
+              {[
+                { label: "Manage Staff Accounts", to: "/admin/users", note: "Accounts, roles, and privileges.", Icon: UsersRound },
+                { label: "Recruitment & AI Policies", to: "/admin/policies", note: "Set policy guardrails and defaults.", Icon: ShieldAlert },
+                { label: "Audit & Usage Reports", to: "/admin/audit", note: "Platform activity and audit timeline.", Icon: BarChart3 },
+                { label: "System Controls", to: "/admin/system", note: "Cleanup, backup, and maintenance.", Icon: Server },
+              ].map((link) => (
+                <motion.div
+                  key={link.to}
+                  whileHover={{ y: -1, transition: { duration: 0.18, ease: [0.32, 0.72, 0, 1] } }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Link
+                    to={link.to}
+                    className="flex items-center gap-3 rounded-xl bg-white px-3.5 py-3 transition-all"
+                    style={{
+                      border: "1px solid rgba(15,23,42,0.07)",
+                      boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+                    }}
+                  >
+                    <span
+                      className="flex h-8 w-8 flex-none items-center justify-center rounded-lg"
+                      style={{
+                        background: "rgba(15,23,42,0.04)",
+                        border: "1px solid rgba(15,23,42,0.06)",
+                      }}
+                    >
+                      <link.Icon size={14} strokeWidth={1.75} style={{ color: "#64748b" }} />
                     </span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">{event.detail}</p>
-                  <p className="mt-2 text-xs text-slate-500">{formatDateTime(event.timestamp)}</p>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
-                No audit events yet.
-              </div>
-            )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900 leading-tight">{link.label}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400 leading-tight">{link.note}</p>
+                    </div>
+                    <ChevronRight size={13} strokeWidth={2} style={{ color: "#cbd5e1", flexShrink: 0 }} />
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </article>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-2">
-        <article className="surface-card overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-slate-950">Flagged files</h2>
-            <p className="mt-1 text-sm text-slate-600">Records waiting on recruiter follow-up.</p>
-          </div>
-          <div className="space-y-3 p-6">
-            {flaggedFiles.length > 0 ? (
-              flaggedFiles.map((file) => (
-                <div key={file.id} className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm font-semibold text-slate-950">{file.employeeName}</p>
-                  <p className="mt-1 text-xs text-slate-500">{file.employeeId} - {file.department}</p>
-                  <p className="mt-2 text-sm text-slate-700">{file.reviewSummary}</p>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
-                No flagged file records.
-              </div>
-            )}
-          </div>
-        </article>
-
-        <article className="surface-card overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-slate-950">Flagged applications</h2>
-            <p className="mt-1 text-sm text-slate-600">Rejected applications are surfaced for oversight.</p>
-          </div>
-          <div className="space-y-3 p-6">
-            {flaggedApplications.length > 0 ? (
-              flaggedApplications.map((application) => (
-                <div key={application.id} className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-                  <p className="text-sm font-semibold text-slate-950">{application.candidateName}</p>
-                  <p className="mt-1 text-xs text-slate-500">{application.jobTitle} - {application.id}</p>
-                  <p className="mt-2 text-sm text-slate-700">Status: {application.status}</p>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
-                No rejected applications yet.
-              </div>
-            )}
-          </div>
-        </article>
-      </section>
+        </motion.section>
       </div>
     </PageFrame>
   );
 }
-

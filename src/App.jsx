@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Navigate, Route, Routes, Outlet, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import AppLayout from "./components/layout/AppLayout";
 import JobsLayout from "./components/layout/JobsLayout";
 import AdminLayout from "./components/layout/AdminLayout";
@@ -66,111 +67,117 @@ function RouteFallback() {
   return <Navigate to="/" replace />;
 }
 
+function AnimatedRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route element={<JobsLayout />}>
+        <Route path="/jobs" element={<PublicJobsBoard />} />
+        <Route path="/jobs/:jobId" element={<PublicJobDetail />} />
+      </Route>
+
+      <Route element={<PublicRoute />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
+
+      <Route element={<ProtectedRoute />}>
+        <Route
+          element={
+            <RecruiterDocsInboxProvider>
+              <Outlet />
+            </RecruiterDocsInboxProvider>
+          }
+        >
+          <Route element={<AppLayout />}>
+            <Route path="/candidate/dashboard" element={<CandidateHome />} />
+            <Route path="/candidate/profile" element={<Navigate to="/account/profile" replace />} />
+            <Route path="/candidate/profile/edit" element={<Navigate to="/account/profile" replace />} />
+            <Route path="/account/profile" element={<AccountProfile />} />
+            <Route path="/candidate/applications" element={<CandidateApplications />} />
+            <Route path="/candidate/documents" element={<CandidateDocuments />} />
+            <Route path="/candidate/notifications" element={<CandidateNotifications />} />
+            <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+            <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
+            <Route path="/recruiter/applicants" element={<RecruiterApplicants />} />
+            <Route path="/recruiter/jobs/:jobId" element={<RecruiterJobModuleLayout />}>
+              <Route path="overview" element={<RecruiterJobOverview />} />
+              <Route path="applicants" element={<RecruiterApplicants />} />
+              <Route path="screening" element={<RecruiterScreening />} />
+              <Route path="analytics" element={<RecruiterAnalytics />} />
+              <Route path="" element={<Navigate to="overview" replace />} />
+            </Route>
+            <Route path="/recruiter/applicant-categories" element={<Navigate to="/recruiter/applicants" replace />} />
+            <Route path="/recruiter/files" element={<RecruiterDigitalFiles />} />
+            <Route path="/recruiter/screening" element={<RecruiterScreening />} />
+            <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
+            <Route path="/recruiter/talent-pool" element={<RecruiterTalentPool />} />
+            <Route path="/recruiter/compliance-gate" element={<RecruiterComplianceGate />} />
+
+            <Route path="/deployment-manager/dashboard" element={<DeploymentManagerDashboard />} />
+            <Route path="/deployment-manager/requests" element={<DeploymentManagerRequests />} />
+            <Route path="/deployment-manager/assignments" element={<DeploymentManagerAssignments />} />
+            <Route path="/deployment-manager/schedule" element={<DeploymentManagerSchedule />} />
+            <Route path="/deployment-manager/notifications" element={<DeploymentManagerAlerts />} />
+            <Route path="/deployment-manager/deployments" element={<DeploymentManagerDeployments />} />
+            <Route path="/deployment-manager/vault" element={<DeploymentManagerVault />} />
+            <Route path="/deployment-manager/alerts" element={<DeploymentManagerAlerts />} />
+
+            <Route
+              path="/deployment-manager/deployment-approvals"
+              element={<Navigate to="/deployment-manager/requests" replace />}
+            />
+            <Route
+              path="/deployment-manager/deployment-board"
+              element={<Navigate to="/deployment-manager/assignments" replace />}
+            />
+            <Route
+              path="/deployment-manager/files"
+              element={<Navigate to="/deployment-manager/vault" replace />}
+            />
+            <Route
+              path="/deployment-manager/system-health"
+              element={<Navigate to="/deployment-manager/notifications" replace />}
+            />
+          </Route>
+
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/staff-accounts" element={<AdminUsers />} />
+            <Route path="/admin/roles-and-privileges" element={<Navigate to="/admin/users" replace />} />
+            <Route path="/admin/work-privileges" element={<Navigate to="/admin/users" replace />} />
+            <Route path="/admin/policies" element={<AdminPolicies />} />
+            <Route path="/admin/audit" element={<AdminUsageHistory />} />
+            <Route path="/admin/usage-history" element={<AdminUsageHistory />} />
+            <Route path="/admin/reports" element={<AdminReports />} />
+            <Route path="/admin/system" element={<AdminSystem />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/system-cleanup" element={<AdminSystemCleanup />} />
+
+            <Route path="/admin/audit-log" element={<Navigate to="/admin/usage-history" replace />} />
+            <Route path="/admin/recruiter-activity" element={<Navigate to="/admin/usage-history" replace />} />
+            <Route path="/admin/candidate-activity" element={<Navigate to="/admin/usage-history" replace />} />
+            <Route path="/admin/files-review" element={<Navigate to="/admin/system-cleanup" replace />} />
+            <Route path="/admin/records" element={<Navigate to="/admin/system-cleanup" replace />} />
+            <Route path="/admin/system-health" element={<Navigate to="/admin/system-cleanup" replace />} />
+          </Route>
+
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<RouteFallback />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <>
       <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route element={<JobsLayout />}>
-          <Route path="/jobs" element={<PublicJobsBoard />} />
-          <Route path="/jobs/:jobId" element={<PublicJobDetail />} />
-        </Route>
-
-        <Route element={<PublicRoute />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Route>
-
-        <Route element={<ProtectedRoute />}>
-          <Route
-            element={
-              <RecruiterDocsInboxProvider>
-                <Outlet />
-              </RecruiterDocsInboxProvider>
-            }
-          >
-            <Route element={<AppLayout />}>
-              <Route path="/candidate/dashboard" element={<CandidateHome />} />
-              <Route path="/candidate/profile" element={<Navigate to="/account/profile" replace />} />
-              <Route path="/candidate/profile/edit" element={<Navigate to="/account/profile" replace />} />
-              <Route path="/account/profile" element={<AccountProfile />} />
-              <Route path="/candidate/applications" element={<CandidateApplications />} />
-              <Route path="/candidate/documents" element={<CandidateDocuments />} />
-              <Route path="/candidate/notifications" element={<CandidateNotifications />} />
-              <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
-              <Route path="/recruiter/jobs" element={<RecruiterJobs />} />
-              <Route path="/recruiter/applicants" element={<RecruiterApplicants />} />
-              <Route path="/recruiter/jobs/:jobId" element={<RecruiterJobModuleLayout />}>
-                <Route path="overview" element={<RecruiterJobOverview />} />
-                <Route path="applicants" element={<RecruiterApplicants />} />
-                <Route path="screening" element={<RecruiterScreening />} />
-                <Route path="analytics" element={<RecruiterAnalytics />} />
-                <Route path="" element={<Navigate to="overview" replace />} />
-              </Route>
-              <Route path="/recruiter/applicant-categories" element={<Navigate to="/recruiter/applicants" replace />} />
-              <Route path="/recruiter/files" element={<RecruiterDigitalFiles />} />
-              <Route path="/recruiter/screening" element={<RecruiterScreening />} />
-              <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
-              <Route path="/recruiter/talent-pool" element={<RecruiterTalentPool />} />
-              <Route path="/recruiter/compliance-gate" element={<RecruiterComplianceGate />} />
-
-              <Route path="/deployment-manager/dashboard" element={<DeploymentManagerDashboard />} />
-              <Route path="/deployment-manager/requests" element={<DeploymentManagerRequests />} />
-              <Route path="/deployment-manager/assignments" element={<DeploymentManagerAssignments />} />
-              <Route path="/deployment-manager/schedule" element={<DeploymentManagerSchedule />} />
-              <Route path="/deployment-manager/notifications" element={<DeploymentManagerAlerts />} />
-              <Route path="/deployment-manager/deployments" element={<DeploymentManagerDeployments />} />
-              <Route path="/deployment-manager/vault" element={<DeploymentManagerVault />} />
-              <Route path="/deployment-manager/alerts" element={<DeploymentManagerAlerts />} />
-
-              <Route
-                path="/deployment-manager/deployment-approvals"
-                element={<Navigate to="/deployment-manager/requests" replace />}
-              />
-              <Route
-                path="/deployment-manager/deployment-board"
-                element={<Navigate to="/deployment-manager/assignments" replace />}
-              />
-              <Route
-                path="/deployment-manager/files"
-                element={<Navigate to="/deployment-manager/vault" replace />}
-              />
-              <Route
-                path="/deployment-manager/system-health"
-                element={<Navigate to="/deployment-manager/notifications" replace />}
-              />
-            </Route>
-
-            <Route element={<AdminLayout />}>
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/profile" element={<AdminProfile />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/staff-accounts" element={<AdminUsers />} />
-              <Route path="/admin/roles-and-privileges" element={<Navigate to="/admin/users" replace />} />
-              <Route path="/admin/work-privileges" element={<Navigate to="/admin/users" replace />} />
-              <Route path="/admin/policies" element={<AdminPolicies />} />
-              <Route path="/admin/audit" element={<AdminUsageHistory />} />
-              <Route path="/admin/usage-history" element={<AdminUsageHistory />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
-              <Route path="/admin/system" element={<AdminSystem />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/system-cleanup" element={<AdminSystemCleanup />} />
-
-              <Route path="/admin/audit-log" element={<Navigate to="/admin/usage-history" replace />} />
-              <Route path="/admin/recruiter-activity" element={<Navigate to="/admin/usage-history" replace />} />
-              <Route path="/admin/candidate-activity" element={<Navigate to="/admin/usage-history" replace />} />
-              <Route path="/admin/files-review" element={<Navigate to="/admin/system-cleanup" replace />} />
-              <Route path="/admin/records" element={<Navigate to="/admin/system-cleanup" replace />} />
-              <Route path="/admin/system-health" element={<Navigate to="/admin/system-cleanup" replace />} />
-            </Route>
-
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-          </Route>
-        </Route>
-
-        <Route path="*" element={<RouteFallback />} />
-      </Routes>
+      <AnimatedRoutes />
     </>
   );
 }
