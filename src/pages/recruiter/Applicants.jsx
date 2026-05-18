@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { MoreVertical } from "lucide-react";
 import { PageFrame } from "../../components/layout/ShellPrimitives";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import { getApplicationStatusLabel } from "../../lib/applicationStatuses";
 import Pagination from "../../components/ui/Pagination";
 import { paginate } from "../../lib/pagination";
 import { usePaginationSearchParams } from "../../lib/usePaginationSearchParams";
+import ApplicantProfileModal from "../../components/recruiter/ApplicantProfileModal";
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
@@ -24,6 +26,8 @@ export default function RecruiterApplicants() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
   const [category, setCategory] = useState("All");
+  const [openMenuApplicationId, setOpenMenuApplicationId] = useState(null);
+  const [profileApplicationId, setProfileApplicationId] = useState(null);
   const { page, pageSize, setPage, resetPage } = usePaginationSearchParams({
     defaultPageSize: 10,
   });
@@ -67,6 +71,36 @@ export default function RecruiterApplicants() {
       setPage(pagination.page);
     }
   }, [page, pagination.page, setPage]);
+
+  useEffect(() => {
+    if (!openMenuApplicationId) return undefined;
+
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (!target || typeof target.closest !== "function") {
+        setOpenMenuApplicationId(null);
+        return;
+      }
+
+      const withinMenu = target.closest(`[data-applicant-actions="${openMenuApplicationId}"]`);
+      if (withinMenu) return;
+      setOpenMenuApplicationId(null);
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [openMenuApplicationId]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpenMenuApplicationId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <PageFrame size="wide">
@@ -154,11 +188,13 @@ export default function RecruiterApplicants() {
                   transition={{ duration: 0.2 }}
                 >
                   {pagination.pageItems.map((item) => (
-                    <tr key={item.id} className="border-t border-slate-100">
+                    <tr key={item.id || item.applicationId} className="border-t border-slate-100">
                       <td className="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
                         {item.candidateName}
                       </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-slate-600">{item.id}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-slate-600">
+                        {item.id || item.applicationId}
+                      </td>
                       <td className="px-6 py-4 text-slate-700">{item.jobTitle}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-slate-700">
                         {getApplicationStatusLabel(item.status)}
@@ -167,12 +203,62 @@ export default function RecruiterApplicants() {
                         {item.updatedOn || item.appliedOn || "-"}
                       </td>
                       <td className="px-6 py-4">
-                        <Link
-                          to={`/recruiter/jobs/${encodeURIComponent(item.jobId)}/screening`}
-                          className="inline-flex whitespace-nowrap rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                        <div
+                          className="relative inline-flex"
+                          data-applicant-actions={String(item.id || item.applicationId || "")}
                         >
-                          Open Job Screening
-                        </Link>
+                          <button
+                            type="button"
+                            aria-haspopup="menu"
+                            aria-expanded={openMenuApplicationId === (item.id || item.applicationId)}
+                            onClick={() =>
+                              setOpenMenuApplicationId((prev) =>
+                                prev === (item.id || item.applicationId)
+                                  ? null
+                                  : item.id || item.applicationId
+                              )
+                            }
+                            className={[
+                              "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition",
+                              openMenuApplicationId === (item.id || item.applicationId)
+                                ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400",
+                            ].join(" ")}
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+
+                          {openMenuApplicationId === (item.id || item.applicationId) ? (
+                            <div
+                              role="menu"
+                              aria-label="Applicant actions"
+                              className="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.12)]"
+                            >
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setProfileApplicationId(item.id || item.applicationId);
+                                  setOpenMenuApplicationId(null);
+                                }}
+                                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                              >
+                                View Profile
+                                <span className="text-slate-400">›</span>
+                              </button>
+                              <div className="h-px bg-slate-100" />
+                              <Link
+                                role="menuitem"
+                                to={`/recruiter/jobs/${encodeURIComponent(item.jobId)}/screening`}
+                                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                                onClick={() => setOpenMenuApplicationId(null)}
+                              >
+                                Open Job Screening
+                                <span className="text-slate-400">›</span>
+                              </Link>
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -199,6 +285,14 @@ export default function RecruiterApplicants() {
             onPageChange={(next) => setPage(next)}
           />
         </section>
+
+        {profileApplicationId ? (
+          <ApplicantProfileModal
+            applicationsOnPage={pagination.pageItems}
+            initialApplicationId={profileApplicationId}
+            onClose={() => setProfileApplicationId(null)}
+          />
+        ) : null}
       </div>
     </PageFrame>
   );

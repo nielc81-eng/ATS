@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
+import { SavedJobsProvider } from "./context/SavedJobsContext";
 import { Candidate201FilesProvider } from "./context/Candidate201FilesContext";
 import { DigitalFilesProvider } from "./context/DigitalFilesContext";
 import { AdminWorkforceProvider } from "./context/AdminWorkforceContext";
@@ -14,17 +15,19 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <RecruitmentDataProvider>
-          <Candidate201FilesProvider>
-            <DigitalFilesProvider>
-              <AdminWorkforceProvider>
-                <TalentPoolProvider>
-                  <App />
-                </TalentPoolProvider>
-              </AdminWorkforceProvider>
-            </DigitalFilesProvider>
-          </Candidate201FilesProvider>
-        </RecruitmentDataProvider>
+        <SavedJobsProvider>
+          <RecruitmentDataProvider>
+            <Candidate201FilesProvider>
+              <DigitalFilesProvider>
+                <AdminWorkforceProvider>
+                  <TalentPoolProvider>
+                    <App />
+                  </TalentPoolProvider>
+                </AdminWorkforceProvider>
+              </DigitalFilesProvider>
+            </Candidate201FilesProvider>
+          </RecruitmentDataProvider>
+        </SavedJobsProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

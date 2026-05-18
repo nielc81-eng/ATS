@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { Heart } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useSavedJobs } from "../../context/SavedJobsContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import Pagination from "../../components/ui/Pagination";
 import { paginate } from "../../lib/pagination";
@@ -29,6 +31,8 @@ function sortJobs(items, sortBy) {
 export default function PublicJobsBoard() {
   const { session, isAuthenticated } = useAuth();
   const { jobs } = useRecruitmentData();
+  const { savedJobIds, isSaved, toggleSaved } = useSavedJobs();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
@@ -37,6 +41,25 @@ export default function PublicJobsBoard() {
   });
   const isCandidate = isAuthenticated && session?.role === "Candidate";
   const isRecruiter = isAuthenticated && session?.role === "Recruiter";
+
+  const activeTab = useMemo(() => {
+    const raw = String(searchParams.get("tab") || "").trim().toLowerCase();
+    return raw === "saved" ? "saved" : "explore";
+  }, [searchParams]);
+
+  const savedJobIdSet = useMemo(() => new Set(savedJobIds), [savedJobIds]);
+
+  const setTab = (nextTab) => {
+    const normalized = nextTab === "saved" ? "saved" : "explore";
+    const nextParams = new URLSearchParams(searchParams);
+    if (normalized === "saved") {
+      nextParams.set("tab", "saved");
+    } else {
+      nextParams.delete("tab");
+    }
+    nextParams.delete("page");
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const departments = useMemo(() => {
     return [
@@ -53,6 +76,10 @@ export default function PublicJobsBoard() {
     const query = search.trim().toLowerCase();
 
     const filtered = jobs.filter((job) => {
+      if (activeTab === "saved" && !savedJobIdSet.has(job.id)) {
+        return false;
+      }
+
       const departmentMatch = department === "All" ? true : job.department === department;
       if (!departmentMatch) return false;
 
@@ -69,7 +96,7 @@ export default function PublicJobsBoard() {
     });
 
     return sortJobs(filtered, sortBy);
-  }, [department, jobs, search, sortBy]);
+  }, [activeTab, department, jobs, savedJobIdSet, search, sortBy]);
 
   const pagination = useMemo(
     () => paginate(visibleJobs, { page, pageSize }),
@@ -144,7 +171,38 @@ export default function PublicJobsBoard() {
       </section>
 
       <section className="surface-card p-6 sm:p-8">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-2xl bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => setTab("explore")}
+              className={
+                activeTab === "explore"
+                  ? "rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm"
+                  : "rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+              }
+            >
+              Explore Jobs
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("saved")}
+              className={
+                activeTab === "saved"
+                  ? "rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm"
+                  : "rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+              }
+            >
+              Saved Jobs
+            </button>
+          </div>
+
+          {activeTab === "saved" ? (
+            <p className="text-sm text-slate-500">{savedJobIds.length} saved</p>
+          ) : null}
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div>
             <label htmlFor="jobs-search" className="mb-2 block text-sm font-medium text-slate-700">
               Search
@@ -203,9 +261,37 @@ export default function PublicJobsBoard() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {pagination.pageItems.length > 0 ? (
+        {activeTab === "saved" && savedJobIds.length === 0 ? (
+          <div className="surface-card px-6 py-10 text-sm text-slate-600 md:col-span-2 xl:col-span-3">
+            <p className="font-medium text-slate-900">No saved jobs yet.</p>
+            <p className="mt-2">
+              Tap the heart icon on a job to save it for later.
+            </p>
+            <button
+              type="button"
+              onClick={() => setTab("explore")}
+              className="mt-4 inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Browse Jobs
+            </button>
+          </div>
+        ) : pagination.pageItems.length > 0 ? (
           pagination.pageItems.map((job) => (
-            <article key={job.id} className="surface-card p-5">
+            <article key={job.id} className="surface-card relative p-5">
+              <button
+                type="button"
+                onClick={() => toggleSaved(job.id)}
+                aria-label={isSaved(job.id) ? "Unsave job" : "Save job"}
+                className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-700"
+              >
+                <Heart
+                  className={
+                    isSaved(job.id)
+                      ? "h-5 w-5 fill-rose-600 text-rose-600"
+                      : "h-5 w-5"
+                  }
+                />
+              </button>
               <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{job.id}</p>
               <h2 className="mt-2 text-lg font-semibold text-slate-950">{job.title}</h2>
               <p className="mt-1 text-sm text-slate-600">{job.department}</p>

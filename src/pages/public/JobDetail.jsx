@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Heart } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useSavedJobs } from "../../context/SavedJobsContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
 import { readCandidateProfileState } from "../../lib/candidateProfileStorage";
 
@@ -47,6 +49,7 @@ export default function PublicJobDetail() {
   const navigate = useNavigate();
   const { session, isAuthenticated } = useAuth();
   const { getJobById, applyToJob, hasApplied } = useRecruitmentData();
+  const { isSaved, toggleSaved } = useSavedJobs();
   const [notice, setNotice] = useState({ type: "", message: "" });
 
   const decodedJobId = useMemo(() => decodeURIComponent(jobId || ""), [jobId]);
@@ -140,9 +143,23 @@ export default function PublicJobDetail() {
     <div className="space-y-6">
       <section className="surface-card p-6 sm:p-8">
         <p className="section-heading">Public Job Board</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-          {job.title}
-        </h1>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            {job.title}
+          </h1>
+          <button
+            type="button"
+            onClick={() => toggleSaved(job.id)}
+            aria-label={isSaved(job.id) ? "Unsave job" : "Save job"}
+            className="mt-1 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-700"
+          >
+            <Heart
+              className={
+                isSaved(job.id) ? "h-5 w-5 fill-rose-600 text-rose-600" : "h-5 w-5"
+              }
+            />
+          </button>
+        </div>
         <p className="mt-2 text-sm text-slate-600">
           {job.department} - {job.id}
         </p>

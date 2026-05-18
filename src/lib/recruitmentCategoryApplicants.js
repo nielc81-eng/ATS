@@ -50,9 +50,12 @@ export function deriveApplicantsByCategory(jobs = [], applications = [], categor
     })
     .map((application) => {
       const jobMeta = jobMetaById.get(String(application?.jobId || ""));
+      const id = String(application?.id || "");
       return {
-        applicationId: String(application?.id || ""),
+        id,
+        applicationId: id,
         candidateName: String(application?.candidateName || "Candidate"),
+        candidateEmail: String(application?.candidateEmail || ""),
         jobId: String(application?.jobId || ""),
         jobTitle: String(application?.jobTitle || jobMeta?.title || "Unknown Role"),
         status: String(application?.status || "Submitted"),
