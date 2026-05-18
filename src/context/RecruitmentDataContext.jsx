@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { useAuth } from "./AuthContext";
 import { recordAdminAuditEvent } from "../lib/adminMockData";
+import { buildCanonicalPersonRef } from "../lib/canonicalPerson";
 import {
   cloneRecruitmentJob,
   createRecruitmentJob,
@@ -20,7 +21,17 @@ import {
   APPLICATION_STATUSES,
   PIPELINE_SHORTLIST_STATUSES,
 } from "../lib/applicationStatuses";
+import {
+  validateApplicationTransition,
+} from "../lib/applicationTransitionGuard";
 import { getInitialApplicationStatus } from "../lib/applicationMatching";
+import { getCandidateDocumentStatusSummary } from "../lib/documentSchemas";
+import {
+  createLifecycleEvent,
+  LIFECYCLE_EVENT_NAME,
+  runLifecycleOrchestrator,
+} from "../lib/lifecycleOrchestrator";
+import { upsertTalentFromHiredApplication } from "../lib/adminWorkforceMockData";
 import {
   deriveApplicantsByCategory,
   deriveCategoryApplicantCounts,
@@ -462,8 +473,19 @@ export function RecruitmentDataProvider({ children }) {
   const addJob = useCallback((payload) => {
     const nextJob = createRecruitmentJob(payload);
     setJobs((prev) => [normalizeJob(nextJob), ...prev]);
+    recordAdminAuditEvent({
+      actor: session?.name || session?.email || "Recruiter",
+      actorRole: session?.role || "Recruiter",
+      action: "Created job requisition",
+      target: nextJob.id,
+      category: "applications",
+      detail: `${nextJob.title} (${nextJob.id}) was created in ${nextJob.department}.`,
+      sourceModule: "recruitment",
+      entityType: "job_requisition",
+      entityId: nextJob.id,
+    });
     return nextJob;
-  }, []);
+  }, [session]);
 
   const updateJob = useCallback((jobId, payload = {}) => {
     const normalizedJobId = String(jobId || "").trim();
@@ -500,8 +522,20 @@ export function RecruitmentDataProvider({ children }) {
       return Object.fromEntries(nextEntries);
     });
 
+    recordAdminAuditEvent({
+      actor: session?.name || session?.email || "Recruiter",
+      actorRole: session?.role || "Recruiter",
+      action: "Updated job requisition",
+      target: nextJob.id,
+      category: "applications",
+      detail: `${nextJob.title} (${nextJob.id}) details were updated.`,
+      sourceModule: "recruitment",
+      entityType: "job_requisition",
+      entityId: nextJob.id,
+    });
+
     return { ok: true, job: nextJob };
-  }, [jobs]);
+  }, [jobs, session]);
 
   const deleteJob = useCallback((jobId) => {
     const normalizedJobId = String(jobId || "").trim();
@@ -526,8 +560,19 @@ export function RecruitmentDataProvider({ children }) {
     }
 
     setJobs((prev) => prev.filter((job) => job.id !== normalizedJobId));
+    recordAdminAuditEvent({
+      actor: session?.name || session?.email || "Recruiter",
+      actorRole: session?.role || "Recruiter",
+      action: "Deleted job requisition",
+      target: targetJob.id,
+      category: "applications",
+      detail: `${targetJob.title} (${targetJob.id}) was deleted.`,
+      sourceModule: "recruitment",
+      entityType: "job_requisition",
+      entityId: targetJob.id,
+    });
     return { ok: true, job: targetJob };
-  }, [applicationsByEmail, jobs]);
+  }, [applicationsByEmail, jobs, session]);
 
   const getCandidatesForJob = useCallback(
     (jobId) => jobs.find((job) => job.id === jobId)?.candidates ?? [],
@@ -647,6 +692,21 @@ export function RecruitmentDataProvider({ children }) {
         screeningCandidateApplicationId: applicationId,
       };
 
+      const lifecycleEvent = createLifecycleEvent(
+        LIFECYCLE_EVENT_NAME.ApplicationSubmitted,
+        {
+          application,
+          actor: payload.name || normalizedEmail || "Candidate",
+          actorRole: "Candidate",
+          personRef: buildCanonicalPersonRef({
+            email: application.candidateEmail,
+            name: application.candidateName,
+            legacyId: application.id,
+            role: "Candidate",
+          }),
+        }
+      );
+
       setApplicationsByEmail((prev) => {
         const existing = prev[normalizedEmail] || [];
         return {
@@ -674,13 +734,26 @@ export function RecruitmentDataProvider({ children }) {
         })
       );
 
+      recordAdminAuditEvent({
+        actor: payload.name || normalizedEmail || "Candidate",
+        actorRole: "Candidate",
+        action: "Submitted application",
+        target: application.id,
+        category: "applications",
+        detail: `${application.candidateName} submitted ${application.id} for ${application.jobTitle}.`,
+        sourceModule: "recruitment",
+        entityType: "application",
+        entityId: application.id,
+        correlationId: lifecycleEvent.id,
+      });
+
       return { ok: true, application };
     },
     [hasApplied, jobs]
   );
 
   const updateApplicationStatus = useCallback(
-    (applicationId, nextStatus, note = "") => {
+    (applicationId, nextStatus, note = "", options = {}) => {
       const normalizedApplicationId = String(applicationId || "").trim();
       const normalizedStatus = String(nextStatus || "").trim();
       const trimmedNote = String(note || "").trim();
@@ -704,6 +777,43 @@ export function RecruitmentDataProvider({ children }) {
       const location = findApplicationLocation(applicationsByEmail, normalizedApplicationId);
       if (!location) {
         return { ok: false, code: "NOT_FOUND", message: "Application not found." };
+      }
+
+      const transitionCheck = validateApplicationTransition({
+        currentStatus: location.application.status,
+        nextStatus: normalizedStatus,
+        actorRole: options.actorRole || session?.role || "Recruiter",
+        note: trimmedNote,
+        docsComplete: (() => {
+          if (normalizedStatus !== APPLICATION_STATUS.HiredOnboarding) return true;
+          if (typeof options.docsComplete === "boolean") return options.docsComplete;
+
+          const docsSummary = getCandidateDocumentStatusSummary({
+            candidateEmail: location.application.candidateEmail,
+            personKey: buildCanonicalPersonRef({
+              email: location.application.candidateEmail,
+              name: location.application.candidateName,
+              legacyId: location.application.id,
+              role: "Candidate",
+            }).personKey,
+          });
+          // Accept both Submitted and Approved as "provided" for onboarding finalization.
+          return docsSummary.allRequiredProvided;
+        })(),
+      });
+      if (!transitionCheck.ok) {
+        recordAdminAuditEvent({
+          actor: session?.name || session?.email || "Recruiter",
+          actorRole: session?.role || "Recruiter",
+          action: "Blocked application transition",
+          target: normalizedApplicationId,
+          category: "applications",
+          detail: transitionCheck.message,
+          sourceModule: "recruitment",
+          entityType: "application",
+          entityId: normalizedApplicationId,
+        });
+        return transitionCheck;
       }
 
       if (location.application.status === normalizedStatus) {
@@ -742,15 +852,47 @@ export function RecruitmentDataProvider({ children }) {
       }
       recordAdminAuditEvent({
         actor,
+        actorRole: session?.role || "Recruiter",
         action: "Updated application status",
         target: updatedApplication.id,
         category: "applications",
         detail: detailParts.join(" "),
+        sourceModule: "recruitment",
+        entityType: "application",
+        entityId: updatedApplication.id,
+      });
+
+      const lifecycleEvent = createLifecycleEvent(
+        LIFECYCLE_EVENT_NAME.ApplicationStatusChanged,
+        {
+          application: updatedApplication,
+          previousStatus: location.application.status,
+          nextStatus: normalizedStatus,
+          actor,
+          actorRole: session?.role || "Recruiter",
+          personRef: buildCanonicalPersonRef({
+            email: updatedApplication.candidateEmail,
+            name: updatedApplication.candidateName,
+            legacyId: updatedApplication.id,
+            role: "Candidate",
+          }),
+        }
+      );
+      runLifecycleOrchestrator(lifecycleEvent, {
+        upsertWorkforceTalentFromApplication: (application, lifecycleOptions) =>
+          upsertTalentFromHiredApplication(application, {
+            department:
+              jobs.find((job) => job.id === application.jobId)?.department || "Onboarding",
+            actor: lifecycleOptions.actor,
+            actorRole: lifecycleOptions.actorRole,
+            correlationId: lifecycleOptions.correlationId,
+            personKey: lifecycleEvent.payload?.personRef?.personKey || "",
+          }),
       });
 
       return { ok: true, application: updatedApplication };
     },
-    [applicationsByEmail, session]
+    [applicationsByEmail, jobs, session]
   );
 
   const withdrawApplication = useCallback(
@@ -758,9 +900,10 @@ export function RecruitmentDataProvider({ children }) {
       updateApplicationStatus(
         applicationId,
         APPLICATION_STATUS.Rejected,
-        "Candidate withdrew the application."
+        "Candidate withdrew the application.",
+        { actorRole: session?.role || "Candidate" }
       ),
-    [updateApplicationStatus]
+    [session?.role, updateApplicationStatus]
   );
 
   const getJobById = useCallback(

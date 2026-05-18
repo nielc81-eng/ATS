@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useAdminData } from "../../context/AdminDataContext";
 import { useRecruiterDocsInbox } from "../../context/RecruiterDocsInboxContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import { toCanonicalReportingStatus } from "../../lib/applicationTransitionGuard";
 
 function formatNumber(value) {
   return new Intl.NumberFormat().format(value);
@@ -42,7 +43,8 @@ export default function AdminCandidateActivity() {
   const applicationRollup = useMemo(() => {
     const byStatus = new Map();
     allApplications.forEach((application) => {
-      byStatus.set(application.status, (byStatus.get(application.status) || 0) + 1);
+      const canonicalStatus = toCanonicalReportingStatus(application.status);
+      byStatus.set(canonicalStatus, (byStatus.get(canonicalStatus) || 0) + 1);
     });
     return ["Submitted", "Shortlisted", "Interview", "Offer", "Hired", "Rejected"].map(
       (status) => ({

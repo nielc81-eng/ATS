@@ -9,6 +9,8 @@ import React, {
 } from "react";
 import { useAuth } from "./AuthContext";
 import { candidate201Statuses } from "../lib/digitalFileStatusConfig";
+import { buildCanonicalPersonRef } from "../lib/canonicalPerson";
+import { createVersionedStorageAdapter } from "../lib/versionedStorage";
 import {
   candidate201DocsStateKey,
   candidate201ReviewUpdatesKey,
@@ -22,6 +24,8 @@ import {
 const Candidate201FilesContext = createContext(null);
 const DEFAULT_ALIAS = "Candidate";
 const CANDIDATE_ID_KEY = "candidate_201_identity_v1";
+const CANDIDATE_DOCS_SCHEMA_VERSION = 2;
+const CANDIDATE_DOCS_STORAGE_PREFIX = "candidate_201_docs_state_v2";
 
 function readJsonArray(key) {
   if (typeof window === "undefined") return [];
@@ -42,66 +46,90 @@ function writeJsonArray(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
-function readStoredDocs(storageKey) {
+function normalizeDocs(value) {
+  const docs = Array.isArray(value) ? value : [];
+  const normalized = docs
+    .map((doc) => ({
+      docType: String(doc?.docType || "").trim(),
+      status: candidate201Statuses.includes(doc?.status) ? doc.status : "Missing",
+      lastUpdated:
+        typeof doc?.lastUpdated === "string" && doc.lastUpdated.trim()
+          ? doc.lastUpdated.trim()
+          : toTodayStamp(),
+      fileName:
+        typeof doc?.fileName === "string" && doc.fileName.trim()
+          ? doc.fileName.trim()
+          : typeof doc?.fileMeta?.name === "string" && doc.fileMeta.name.trim()
+            ? doc.fileMeta.name.trim()
+            : "",
+      notes:
+        typeof doc?.notes === "string"
+          ? doc.notes
+          : typeof doc?.note === "string"
+            ? doc.note
+            : "",
+    }))
+    .filter((doc) => doc.docType);
+
+  return normalized.length > 0 ? normalized : null;
+}
+
+function readLegacyDocs(legacyStorageKey) {
   if (typeof window === "undefined") return null;
-
   try {
-    const raw = window.localStorage.getItem(storageKey);
+    const raw = window.localStorage.getItem(legacyStorageKey);
     if (!raw) return null;
-
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-
-    const normalized = parsed
-      .map((doc) => ({
-        docType: String(doc?.docType || "").trim(),
-        status: candidate201Statuses.includes(doc?.status) ? doc.status : "Missing",
-        lastUpdated:
-          typeof doc?.lastUpdated === "string" && doc.lastUpdated.trim()
-            ? doc.lastUpdated.trim()
-            : toTodayStamp(),
-        fileName:
-          typeof doc?.fileName === "string" && doc.fileName.trim()
-            ? doc.fileName.trim()
-            : typeof doc?.fileMeta?.name === "string" && doc.fileMeta.name.trim()
-              ? doc.fileMeta.name.trim()
-              : "",
-        notes:
-          typeof doc?.notes === "string"
-            ? doc.notes
-            : typeof doc?.note === "string"
-              ? doc.note
-              : "",
-      }))
-      .filter((doc) => doc.docType);
-
-    return normalized.length > 0 ? normalized : null;
+    return normalizeDocs(parsed);
   } catch {
     return null;
   }
 }
 
-function getIdentity(session) {
-  if (typeof window === "undefined") {
-    return {
-      candidateId: String(session?.token || "candidate").trim() || "candidate",
-      candidateAlias:
-        typeof session?.name === "string" && session.name.trim()
-          ? session.name.trim()
-          : DEFAULT_ALIAS,
-    };
-  }
+function buildDocsStorageKey(personKey) {
+  return `${CANDIDATE_DOCS_STORAGE_PREFIX}:${personKey}`;
+}
 
-  const sessionId = typeof session?.token === "string" ? session.token.trim() : "";
+function createDocsStorageAdapter(storageKey) {
+  return createVersionedStorageAdapter({
+    key: storageKey,
+    version: CANDIDATE_DOCS_SCHEMA_VERSION,
+    seed: getCandidate201SeedDocs,
+    migrate: (legacyValue) => normalizeDocs(legacyValue) || getCandidate201SeedDocs(),
+  });
+}
+
+function getIdentity(session) {
   const sessionAlias =
     typeof session?.name === "string" && session.name.trim()
       ? session.name.trim()
       : DEFAULT_ALIAS;
+  const sessionEmail =
+    typeof session?.email === "string" ? session.email.trim().toLowerCase() : "";
+  const sessionId = typeof session?.token === "string" ? session.token.trim() : "";
 
-  if (sessionId) {
+  const personRef = buildCanonicalPersonRef({
+    email: sessionEmail,
+    name: sessionAlias,
+    legacyId: sessionId,
+    role: session?.role,
+  });
+
+  if (typeof window === "undefined") {
     return {
-      candidateId: sessionId,
+      candidateId: sessionId || personRef.personKey,
       candidateAlias: sessionAlias,
+      candidateEmail: sessionEmail,
+      personKey: personRef.personKey,
+    };
+  }
+
+  if (sessionEmail) {
+    return {
+      candidateId: personRef.personKey,
+      candidateAlias: sessionAlias,
+      candidateEmail: sessionEmail,
+      personKey: personRef.personKey,
     };
   }
 
@@ -111,6 +139,8 @@ function getIdentity(session) {
       return {
         candidateId: stored,
         candidateAlias: sessionAlias,
+        candidateEmail: "",
+        personKey: stored,
       };
     }
 
@@ -121,22 +151,35 @@ function getIdentity(session) {
     return {
       candidateId: generated,
       candidateAlias: sessionAlias,
+      candidateEmail: "",
+      personKey: generated,
     };
   } catch {
+    const fallbackId = `cand-${Date.now().toString(36)}`;
     return {
-      candidateId: `cand-${Date.now().toString(36)}`,
+      candidateId: fallbackId,
       candidateAlias: sessionAlias,
+      candidateEmail: "",
+      personKey: fallbackId,
     };
   }
 }
 
-function getLatestReviewUpdates(candidateId) {
+function getLatestReviewUpdates({ candidateId, candidateEmail, personKey }) {
   const updates = readJsonArray(candidate201ReviewUpdatesKey);
-  return updates.filter((update) => update && update.candidateId === candidateId);
+  const normalizedEmail = String(candidateEmail || "").trim().toLowerCase();
+  return updates.filter((update) => {
+    if (!update) return false;
+    if (personKey && String(update.personKey || "").trim() === personKey) return true;
+    if (normalizedEmail && String(update.candidateEmail || "").trim().toLowerCase() === normalizedEmail) {
+      return true;
+    }
+    return update.candidateId === candidateId;
+  });
 }
 
-function mergeReviewUpdates(docs, candidateId) {
-  const updates = getLatestReviewUpdates(candidateId);
+function mergeReviewUpdates(docs, identity) {
+  const updates = getLatestReviewUpdates(identity);
   if (updates.length === 0) return docs;
 
   const latestByDocType = new Map();
@@ -196,25 +239,42 @@ export function Candidate201FilesProvider({ children }) {
   const identity = useMemo(() => getIdentity(session), [session]);
   const identityRef = useRef(identity);
   identityRef.current = identity;
-  const storageKey = useMemo(
+  const storageKey = useMemo(() => buildDocsStorageKey(identity.personKey), [identity.personKey]);
+  const legacyStorageKey = useMemo(
     () => `${candidate201DocsStateKey}:${identity.candidateId}`,
     [identity.candidateId]
   );
+  const storageAdapter = useMemo(() => createDocsStorageAdapter(storageKey), [storageKey]);
 
-  const [docs, setDocs] = useState(() => readStoredDocs(storageKey) ?? getCandidate201SeedDocs());
+  const [docs, setDocs] = useState(() => {
+    const nextDocs = normalizeDocs(storageAdapter.read());
+    if (nextDocs) return nextDocs;
+    const legacyDocs = readLegacyDocs(legacyStorageKey);
+    if (legacyDocs) return legacyDocs;
+    return getCandidate201SeedDocs();
+  });
 
   useEffect(() => {
-    const nextDocs = readStoredDocs(storageKey);
-    setDocs(nextDocs ?? getCandidate201SeedDocs());
-  }, [storageKey]);
+    const nextDocs = normalizeDocs(storageAdapter.read());
+    if (nextDocs) {
+      setDocs(nextDocs);
+      return;
+    }
+    const legacyDocs = readLegacyDocs(legacyStorageKey);
+    if (legacyDocs) {
+      storageAdapter.save(legacyDocs);
+      setDocs(legacyDocs);
+      return;
+    }
+    setDocs(getCandidate201SeedDocs());
+  }, [legacyStorageKey, storageAdapter]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(storageKey, JSON.stringify(docs));
-  }, [docs, storageKey]);
+    storageAdapter.save(docs);
+  }, [docs, storageAdapter]);
 
   const syncReviewUpdates = useCallback(() => {
-    setDocs((prev) => mergeReviewUpdates(prev, identityRef.current.candidateId));
+    setDocs((prev) => mergeReviewUpdates(prev, identityRef.current));
   }, []);
 
   useEffect(() => {
@@ -269,6 +329,8 @@ export function Candidate201FilesProvider({ children }) {
 
     const event = createCandidate201SubmissionEvent({
       candidateId: identityRef.current.candidateId,
+      candidateEmail: identityRef.current.candidateEmail,
+      personKey: identityRef.current.personKey,
       candidateAlias: identityRef.current.candidateAlias,
       docType: normalizedDocType,
       fileName,
@@ -312,8 +374,18 @@ export function Candidate201FilesProvider({ children }) {
       setDocStatus,
       candidateId: identity.candidateId,
       candidateAlias: identity.candidateAlias,
+      candidateEmail: identity.candidateEmail,
+      personKey: identity.personKey,
     }),
-    [docs, submitDoc, setDocStatus, identity.candidateAlias, identity.candidateId]
+    [
+      docs,
+      submitDoc,
+      setDocStatus,
+      identity.candidateAlias,
+      identity.candidateEmail,
+      identity.candidateId,
+      identity.personKey,
+    ]
   );
 
   return (

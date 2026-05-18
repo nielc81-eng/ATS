@@ -30,6 +30,12 @@ export const navigationByRole = {
       icon: "ClipboardList",
     },
     {
+      label: "Internal Mobility",
+      to: "/candidate/internal-mobility",
+      hint: "Update redeployment profile",
+      icon: "Shuffle",
+    },
+    {
       label: "Documents",
       to: "/candidate/documents",
       hint: "Resume and onboarding files",
@@ -73,6 +79,12 @@ export const navigationByRole = {
       to: "/recruiter/screening",
       hint: "Review AI-ranked candidates",
       icon: "ScanSearch",
+    },
+    {
+      label: "Internal Mobility",
+      to: "/recruiter/internal-mobility",
+      hint: "Redeployment weighting",
+      icon: "Shuffle",
     },
     {
       label: "Analytics",
@@ -120,6 +132,12 @@ export const navigationByRole = {
       icon: "CalendarRange",
     },
     {
+      label: "Internal Mobility",
+      to: "/deployment-manager/internal-mobility",
+      hint: "Validate internal ratings",
+      icon: "Shuffle",
+    },
+    {
       label: "Digital 201 Vault",
       to: "/deployment-manager/vault",
       hint: "Manage employee vault records",
@@ -151,6 +169,12 @@ export const navigationByRole = {
       to: "/admin/policies",
       hint: "Set policy guardrails and defaults",
       icon: "ShieldAlert",
+    },
+    {
+      label: "Internal Mobility",
+      to: "/admin/internal-mobility",
+      hint: "Audit weighting governance",
+      icon: "Shuffle",
     },
     {
       label: "Audit Timeline",

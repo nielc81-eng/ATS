@@ -35,6 +35,10 @@ function normalizeText(value, fallback) {
   return text || fallback;
 }
 
+function normalizeEmail(value) {
+  return normalizeText(value, "").toLowerCase();
+}
+
 function normalizeFileMeta(fileMeta) {
   if (!fileMeta || typeof fileMeta !== "object") return null;
 
@@ -61,6 +65,8 @@ export function createCandidateDocSubmissionEvent(payload = {}) {
     eventId,
     kind: "candidate-doc-submitted",
     candidateId: normalizeText(payload.candidateId, "candidate"),
+    candidateEmail: normalizeEmail(payload.candidateEmail),
+    personKey: normalizeText(payload.personKey, ""),
     candidateAlias: normalizeText(payload.candidateAlias, "Candidate"),
     candidateIdentifier: normalizeText(
       payload.candidateIdentifier || payload.candidateId,
@@ -82,6 +88,8 @@ export function createCandidate201SubmissionEvent(payload = {}) {
   return {
     ...event,
     candidateId: normalizeText(payload.candidateId, "candidate"),
+    candidateEmail: normalizeEmail(payload.candidateEmail),
+    personKey: normalizeText(payload.personKey, event.personKey || ""),
     fileName: normalizeText(payload.fileName, event.fileMeta?.name || "uploaded-file"),
   };
 }
@@ -101,6 +109,8 @@ export function normalizeCandidateDocSubmissionEvent(event) {
     eventId,
     kind: "candidate-doc-submitted",
     candidateId: normalizeText(event?.candidateId, "candidate"),
+    candidateEmail: normalizeEmail(event?.candidateEmail),
+    personKey: normalizeText(event?.personKey, ""),
     candidateAlias: normalizeText(event?.candidateAlias, "Candidate"),
     candidateIdentifier: normalizeText(
       event?.candidateIdentifier || event?.candidateId,
@@ -158,6 +168,8 @@ export function createRecruiterInboxItemFromSubmission(submission) {
     id: event.id,
     sourceEventId: event.id,
     candidateId: event.candidateId,
+    candidateEmail: event.candidateEmail,
+    personKey: event.personKey,
     candidateAlias: event.candidateAlias,
     candidateIdentifier: event.candidateIdentifier,
     docType: event.docType,
@@ -183,6 +195,8 @@ export function normalizeRecruiterInboxItem(item) {
     id,
     sourceEventId: normalizeText(item?.sourceEventId, id),
     candidateId: normalizeText(item?.candidateId, "candidate"),
+    candidateEmail: normalizeEmail(item?.candidateEmail),
+    personKey: normalizeText(item?.personKey, ""),
     candidateAlias: normalizeText(item?.candidateAlias, "Candidate"),
     candidateIdentifier: normalizeText(item?.candidateIdentifier, "Unknown candidate"),
     docType: normalizeText(item?.docType, "Unknown document"),
@@ -218,4 +232,70 @@ export function appendCandidateDocSubmissionEvent(payload = {}) {
   );
 
   return event;
+}
+
+function readJsonArraySafely(key) {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function getCandidateDocumentStatusSummary({ candidateEmail = "", personKey = "" } = {}) {
+  const normalizedEmail = normalizeEmail(candidateEmail);
+  const normalizedPersonKey = normalizeText(personKey, "");
+  const updates = readJsonArraySafely(candidate201ReviewUpdatesKey);
+  const relevant = updates.filter((update) => {
+    const updateEmail = normalizeEmail(update?.candidateEmail);
+    const updatePersonKey = normalizeText(update?.personKey, "");
+    if (normalizedEmail && updateEmail === normalizedEmail) return true;
+    if (normalizedPersonKey && updatePersonKey === normalizedPersonKey) return true;
+    return false;
+  });
+
+  const latestByDocType = new Map();
+  relevant.forEach((update) => {
+    const docType = normalizeText(update?.docType, "");
+    if (!docType) return;
+    const previous = latestByDocType.get(docType);
+    const nextTime = Date.parse(update?.reviewedAt || "");
+    const previousTime = Date.parse(previous?.reviewedAt || "");
+    if (!previous || nextTime >= previousTime) {
+      latestByDocType.set(docType, {
+        docType,
+        status: normalizeText(update?.status, "Submitted"),
+        reviewedAt: normalizeText(update?.reviewedAt, ""),
+      });
+    }
+  });
+
+  const docs = candidateOnboardingDocTypes.map((docType) => {
+    const match = latestByDocType.get(docType);
+    return {
+      docType,
+      status: normalizeText(match?.status, "Submitted"),
+    };
+  });
+
+  const approvedCount = docs.filter((doc) => doc.status === "Approved").length;
+  const providedCount = docs.filter(
+    (doc) => doc.status === "Approved" || doc.status === "Submitted"
+  ).length;
+  return {
+    docs,
+    approvedCount,
+    providedCount,
+    requiredCount: candidateOnboardingDocTypes.length,
+    allRequiredApproved:
+      approvedCount === candidateOnboardingDocTypes.length &&
+      candidateOnboardingDocTypes.length > 0,
+    allRequiredProvided:
+      providedCount === candidateOnboardingDocTypes.length &&
+      candidateOnboardingDocTypes.length > 0,
+  };
 }

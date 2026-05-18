@@ -99,6 +99,12 @@ function readAuditEvents() {
       target: typeof event?.target === "string" ? event.target : "",
       category: typeof event?.category === "string" ? event.category : "system",
       detail: typeof event?.detail === "string" ? event.detail : "",
+      actorRole: typeof event?.actorRole === "string" ? event.actorRole : "",
+      sourceModule: typeof event?.sourceModule === "string" ? event.sourceModule : "",
+      entityType: typeof event?.entityType === "string" ? event.entityType : "",
+      entityId: typeof event?.entityId === "string" ? event.entityId : "",
+      correlationId:
+        typeof event?.correlationId === "string" ? event.correlationId : "",
     }))
     .filter((event) => event.id && event.action)
     .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp));
@@ -179,6 +185,11 @@ export function recordAdminAuditEvent(payload) {
     target: String(payload?.target || "").trim(),
     category: String(payload?.category || "system").trim(),
     detail: String(payload?.detail || "").trim(),
+    actorRole: String(payload?.actorRole || "").trim(),
+    sourceModule: String(payload?.sourceModule || "").trim(),
+    entityType: String(payload?.entityType || "").trim(),
+    entityId: String(payload?.entityId || "").trim(),
+    correlationId: String(payload?.correlationId || "").trim(),
   };
 
   const next = [entry, ...readAuditEvents()];

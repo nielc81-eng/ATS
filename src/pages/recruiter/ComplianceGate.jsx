@@ -2,12 +2,15 @@ import React, { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useDigitalFiles } from "../../context/DigitalFilesContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import { recordAdminAuditEvent } from "../../lib/adminMockData";
 import {
   APPLICATION_STATUS,
   getApplicationStatusLabel,
   INTERVIEW_GATE_FAIL_STATUS,
   INTERVIEW_GATE_PASS_STATUS,
 } from "../../lib/applicationStatuses";
+import { buildCanonicalPersonRef } from "../../lib/canonicalPerson";
+import { getCandidateDocumentStatusSummary } from "../../lib/documentSchemas";
 import {
   getComplianceGateDecisions,
   upsertComplianceGateDecision,
@@ -74,10 +77,28 @@ export default function ComplianceGate() {
       return;
     }
 
+    const personRef = buildCanonicalPersonRef({
+      email: application.candidateEmail,
+      name: application.candidateName,
+      legacyId: application.id,
+      role: "Candidate",
+    });
+    const docsSummary = getCandidateDocumentStatusSummary({
+      candidateEmail: personRef.email,
+      personKey: personRef.personKey,
+    });
+    if (!docsSummary.allRequiredApproved) {
+      setNotice(
+        `Cannot finalize onboarding. Required docs approved: ${docsSummary.approvedCount}/${docsSummary.requiredCount}.`
+      );
+      return;
+    }
+
     const result = updateApplicationStatus(
       application.id,
       INTERVIEW_GATE_PASS_STATUS,
-      note
+      note,
+      { docsComplete: true, actorRole: session?.role || "Recruiter" }
     );
     if (!result.ok) {
       setNotice(result.message);
@@ -91,12 +112,25 @@ export default function ComplianceGate() {
       actor: session?.name || session?.email || "Talent Acquisition",
     });
     setDecisions(getComplianceGateDecisions());
+    recordAdminAuditEvent({
+      actor: session?.name || session?.email || "Talent Acquisition",
+      actorRole: session?.role || "Recruiter",
+      action: "Passed compliance interview gate",
+      target: application.id,
+      category: "applications",
+      detail: `${application.candidateName} finalized for onboarding.`,
+      sourceModule: "compliance-gate",
+      entityType: "application",
+      entityId: application.id,
+    });
 
     addFile({
       employeeName: application.candidateName,
       employeeId: `EMP-${application.id.slice(-4)}`,
       department: "Onboarding",
       notes: `Onboarding finalized via 7-day compliance interview gate for ${application.jobTitle}.`,
+      sourceApplicationId: application.id,
+      personKey: personRef.personKey,
     });
 
     setNotice(
@@ -114,7 +148,8 @@ export default function ComplianceGate() {
     const result = updateApplicationStatus(
       application.id,
       INTERVIEW_GATE_FAIL_STATUS,
-      note
+      note,
+      { actorRole: session?.role || "Recruiter" }
     );
     if (!result.ok) {
       setNotice(result.message);
@@ -128,6 +163,17 @@ export default function ComplianceGate() {
       actor: session?.name || session?.email || "Talent Acquisition",
     });
     setDecisions(getComplianceGateDecisions());
+    recordAdminAuditEvent({
+      actor: session?.name || session?.email || "Talent Acquisition",
+      actorRole: session?.role || "Recruiter",
+      action: "Failed compliance interview gate",
+      target: application.id,
+      category: "applications",
+      detail: `${application.candidateName} moved to backout/archive.`,
+      sourceModule: "compliance-gate",
+      entityType: "application",
+      entityId: application.id,
+    });
 
     setNotice(`${application.candidateName} marked as backout and archived.`);
   };

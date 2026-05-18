@@ -98,8 +98,8 @@ export const digitalFilesSeed = [
 export function cloneDigitalFile(file) {
   return {
     ...file,
-    tags: [...file.tags],
-    documents: [...file.documents],
+    tags: Array.isArray(file?.tags) ? [...file.tags] : [],
+    documents: Array.isArray(file?.documents) ? [...file.documents] : [],
   };
 }
 
@@ -130,6 +130,9 @@ export function createDigitalFile(payload = {}) {
     ],
     notes: String(payload.notes || "Mock file attached from the file vault.").trim(),
     reviewSummary: "New file attached and waiting for HR review.",
+    sourceApplicationId: String(payload.sourceApplicationId || "").trim(),
+    personKey: String(payload.personKey || "").trim(),
+    candidateEmail: String(payload.candidateEmail || "").trim().toLowerCase(),
   };
 }
 

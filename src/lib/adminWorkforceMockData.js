@@ -49,6 +49,15 @@ function writeJsonArray(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+function recordWorkforceAudit(payload = {}) {
+  recordAdminAuditEvent({
+    sourceModule: "workforce",
+    entityType: payload.entityType || "workforce_record",
+    entityId: payload.entityId || payload.target || "",
+    ...payload,
+  });
+}
+
 function createId(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -85,6 +94,7 @@ function normalizeTalentRecord(raw = {}) {
     sourceDepartment: normalizeText(raw.sourceDepartment) || "",
     candidateName: normalizeText(raw.candidateName) || "Candidate",
     candidateEmail: normalizeText(raw.candidateEmail) || "",
+    personKey: normalizeText(raw.personKey) || "",
     candidateAlias: normalizeText(raw.candidateAlias) || "",
     skills: Array.isArray(raw.skills)
       ? raw.skills.map(normalizeText).filter(Boolean)
@@ -318,6 +328,123 @@ export function buildSourceKey(source = {}) {
   );
 }
 
+export function upsertTalentFromHiredApplication(application = {}, options = {}) {
+  const applicationId = normalizeText(application.id);
+  if (!applicationId) {
+    return { ok: false, message: "Application id is required for workforce upsert." };
+  }
+
+  const pool = readTalentPool();
+  const actor = normalizeText(options.actor) || "System";
+  const actorRole = normalizeText(options.actorRole) || "System";
+  const candidateEmail = normalizeText(application.candidateEmail).toLowerCase();
+
+  const existingRecord =
+    pool.find((record) => normalizeText(record.sourceApplicationId) === applicationId) ||
+    pool.find(
+      (record) =>
+        candidateEmail &&
+        normalizeText(record.candidateEmail).toLowerCase() === candidateEmail &&
+        normalizeText(record.sourceJobId) === normalizeText(application.jobId)
+    ) ||
+    null;
+
+  const now = new Date().toISOString();
+
+  if (existingRecord) {
+    const updatedRecord = appendTalentHistory(
+      {
+        ...existingRecord,
+        sourceApplicationId: applicationId,
+        sourceType: "hired_onboarding",
+        sourceJobId: normalizeText(application.jobId) || existingRecord.sourceJobId,
+        sourceJobTitle: normalizeText(application.jobTitle) || existingRecord.sourceJobTitle,
+        sourceDepartment: normalizeText(options.department) || existingRecord.sourceDepartment,
+        candidateName: normalizeText(application.candidateName) || existingRecord.candidateName,
+        candidateEmail: candidateEmail || existingRecord.candidateEmail,
+        personKey: normalizeText(options.personKey) || existingRecord.personKey,
+        status: existingRecord.status === "Archived" ? "Ready" : existingRecord.status,
+        updatedAt: now,
+        updatedBy: actor,
+      },
+      actor,
+      "Lifecycle workforce upsert",
+      `Synced from hired onboarding application ${applicationId}.`
+    );
+
+    writeTalentPool(pool.map((record) => (record.id === existingRecord.id ? updatedRecord : record)));
+
+    recordWorkforceAudit({
+      actor,
+      actorRole,
+      action: "Lifecycle workforce talent synced",
+      target: updatedRecord.id,
+      category: "workforce",
+      detail: `${updatedRecord.candidateName} synced from application ${applicationId}.`,
+      sourceModule: "lifecycle",
+      entityType: "talent_pool_record",
+      entityId: updatedRecord.id,
+      correlationId: normalizeText(options.correlationId),
+    });
+
+    return { ok: true, record: updatedRecord, created: false };
+  }
+
+  const sourceDepartment = normalizeText(options.department) || "Onboarding";
+  const record = normalizeTalentRecord({
+    id: createId("TP"),
+    sourceKey: `application:${applicationId}`,
+    sourceType: "hired_onboarding",
+    sourceApplicationId: applicationId,
+    sourceJobId: normalizeText(application.jobId),
+    sourceJobTitle: normalizeText(application.jobTitle),
+    sourceDepartment,
+    candidateName: normalizeText(application.candidateName, "Candidate"),
+    candidateEmail,
+    personKey: normalizeText(options.personKey),
+    candidateAlias: normalizeText(application.candidateName, "Candidate"),
+    skills: Array.isArray(options.skills) ? options.skills : [],
+    score: typeof options.score === "number" ? options.score : 0,
+    yearsExperience:
+      typeof options.yearsExperience === "number" ? options.yearsExperience : 0,
+    roleFit: normalizeText(application.jobTitle, "Open Role"),
+    availability: "Available",
+    location: normalizeText(options.location, "Remote"),
+    adminNotes: "Generated from Hired/Onboarding lifecycle handoff.",
+    matchContext: normalizeText(options.matchContext, ""),
+    status: "Ready",
+    addedAt: now,
+    addedBy: actor,
+    updatedAt: now,
+    updatedBy: actor,
+    history: [
+      {
+        at: now,
+        by: actor,
+        action: "Lifecycle workforce upsert",
+        detail: `Created from hired onboarding application ${applicationId}.`,
+      },
+    ],
+  });
+
+  writeTalentPool([record, ...pool]);
+
+  recordWorkforceAudit({
+    actor,
+    actorRole,
+    action: "Lifecycle workforce talent created",
+    target: record.id,
+    category: "workforce",
+    detail: `${record.candidateName} created from application ${applicationId}.`,
+    sourceModule: "lifecycle",
+    entityType: "talent_pool_record",
+    entityId: record.id,
+    correlationId: normalizeText(options.correlationId),
+  });
+
+  return { ok: true, record, created: true };
+}
+
 function getCurrentDateStamp() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -408,7 +535,7 @@ export function createDeploymentRequest(talentId, payload = {}, actor = "Recruit
   const next = [request, ...requests];
   writeRequests(next);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Created deployment request",
     target: record.id,
@@ -493,7 +620,7 @@ export function submitDeploymentRequest(requestId, actor = "Recruiter") {
   const next = requests.map((item) => (item.id === request.id ? nextRequest : item));
   writeRequests(next);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Submitted deployment request",
     target: request.talentId,
@@ -530,7 +657,7 @@ export function rejectDeploymentRequest(requestId, reason = "", actor = "Adminis
   const next = requests.map((item) => (item.id === request.id ? nextRequest : item));
   writeRequests(next);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Rejected deployment request",
     target: request.talentId,
@@ -613,7 +740,7 @@ export function approveDeploymentRequest(requestId, payload = {}, actor = "Admin
     );
     writeRequests(finalizedRequests);
 
-    recordAdminAuditEvent({
+    recordWorkforceAudit({
       actor,
       action: "Assigned deployment request",
       target: request.talentId,
@@ -624,7 +751,7 @@ export function approveDeploymentRequest(requestId, payload = {}, actor = "Admin
     return { ok: true, request: finalizedRequest, assignment: assignmentResult.assignment };
   }
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Approved deployment request",
     target: request.talentId,
@@ -690,7 +817,7 @@ export function addTalentToPool(source = {}, payload = {}, actor = "Administrato
   const next = [record, ...pool];
   writeTalentPool(next);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Added talent to pool",
     target: record.id,
@@ -745,7 +872,7 @@ export function updateTalentRecord(talentId, updates = {}, actor = "Administrato
   writeTalentPool(next);
 
   if (changedFields.length > 0) {
-    recordAdminAuditEvent({
+    recordWorkforceAudit({
       actor,
       action: "Updated talent record",
       target: record.id,
@@ -793,7 +920,7 @@ export function updateTalentStatus(talentId, status, actor = "Administrator", no
   const next = pool.map((item) => (item.id === record.id ? nextRecord : item));
   writeTalentPool(next);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Changed talent status",
     target: record.id,
@@ -924,7 +1051,7 @@ export function assignTalentToTarget(talentId, payload = {}, actor = "Administra
   const nextPool = pool.map((item) => (item.id === record.id ? nextRecord : item));
   writeTalentPool(nextPool);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: actionLabel,
     target: record.id,
@@ -1013,7 +1140,7 @@ export function releaseTalentFromAssignment(talentId, actor = "Administrator", n
   const nextPool = pool.map((item) => (item.id === record.id ? nextRecord : item));
   writeTalentPool(nextPool);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Released talent",
     target: record.id,
@@ -1103,7 +1230,7 @@ export function archiveTalentRecord(talentId, actor = "Administrator", reason = 
   const nextPool = pool.map((item) => (item.id === record.id ? nextRecord : item));
   writeTalentPool(nextPool);
 
-  recordAdminAuditEvent({
+  recordWorkforceAudit({
     actor,
     action: "Archived talent record",
     target: record.id,
@@ -1274,3 +1401,4 @@ export function ensureAdminWorkforceSeedData(actor = "System") {
     }
   }
 }
+

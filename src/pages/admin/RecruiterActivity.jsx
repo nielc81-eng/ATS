@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useAdminData } from "../../context/AdminDataContext";
 import { useDigitalFiles } from "../../context/DigitalFilesContext";
 import { useRecruitmentData } from "../../context/RecruitmentDataContext";
+import { toCanonicalReportingStatus } from "../../lib/applicationTransitionGuard";
 
 function formatNumber(value) {
   return new Intl.NumberFormat().format(value);
@@ -33,7 +34,9 @@ export default function AdminRecruiterActivity() {
       jobs: jobs.length,
       applications: allApplications.length,
       shortlisted: allApplications.filter((application) =>
-        ["Shortlisted", "Interview", "Offer", "Hired"].includes(application.status)
+        ["Shortlisted", "Interview", "Offer", "Hired"].includes(
+          toCanonicalReportingStatus(application.status)
+        )
       ).length,
       flaggedFiles: files.filter((file) => file.status === "Needs Action").length,
     }),
@@ -42,9 +45,14 @@ export default function AdminRecruiterActivity() {
 
   const statusDistribution = useMemo(() => {
     const order = ["Submitted", "Shortlisted", "Interview", "Offer", "Hired", "Rejected"];
+    const canonicalCounts = allApplications.reduce((acc, application) => {
+      const canonicalStatus = toCanonicalReportingStatus(application.status);
+      acc[canonicalStatus] = (acc[canonicalStatus] || 0) + 1;
+      return acc;
+    }, {});
     return order.map((status) => ({
       status,
-      count: allApplications.filter((application) => application.status === status).length,
+      count: canonicalCounts[status] || 0,
     }));
   }, [allApplications]);
 

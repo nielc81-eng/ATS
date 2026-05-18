@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { recordAdminAuditEvent } from "../lib/adminMockData";
 import {
   CANDIDATE_DOC_QUEUE_EVENT_NAME,
   CANDIDATE_DOC_SUBMISSION_QUEUE_KEY,
@@ -84,6 +85,8 @@ function appendCandidateReviewUpdate(item, status, reviewSummary, reviewedBy) {
     eventId: item.sourceEventId || item.id,
     reviewedAt: getReviewTimestamp(),
     candidateId: item.candidateId || "candidate",
+    candidateEmail: item.candidateEmail || "",
+    personKey: item.personKey || "",
     candidateAlias: item.candidateAlias || "Candidate",
     docType: item.docType,
     fileName: item.fileMeta?.name || item.docType,
@@ -195,6 +198,17 @@ export function RecruiterDocsInboxProvider({ children }) {
         reviewSummary || "Approved for record.",
         "Recruiter Ops"
       );
+      recordAdminAuditEvent({
+        actor: "Recruiter Ops",
+        actorRole: "Recruiter",
+        action: "Approved candidate document",
+        target: current.id,
+        category: "records",
+        detail: `${current.candidateAlias} ${current.docType} approved.`,
+        sourceModule: "recruiter-docs-inbox",
+        entityType: "candidate_document",
+        entityId: current.id,
+      });
     }
   }, []);
 
@@ -217,6 +231,17 @@ export function RecruiterDocsInboxProvider({ children }) {
         reviewSummary || "Additional information is required.",
         "Recruiter Ops"
       );
+      recordAdminAuditEvent({
+        actor: "Recruiter Ops",
+        actorRole: "Recruiter",
+        action: "Requested candidate document action",
+        target: current.id,
+        category: "records",
+        detail: `${current.candidateAlias} ${current.docType} marked as needs action.`,
+        sourceModule: "recruiter-docs-inbox",
+        entityType: "candidate_document",
+        entityId: current.id,
+      });
     }
   }, []);
 
@@ -238,6 +263,17 @@ export function RecruiterDocsInboxProvider({ children }) {
         reviewSummary || "Reviewed by recruiter.",
         "Recruiter Ops"
       );
+      recordAdminAuditEvent({
+        actor: "Recruiter Ops",
+        actorRole: "Recruiter",
+        action: "Reviewed candidate document",
+        target: current.id,
+        category: "records",
+        detail: `${current.candidateAlias} ${current.docType} reviewed.`,
+        sourceModule: "recruiter-docs-inbox",
+        entityType: "candidate_document",
+        entityId: current.id,
+      });
     }
   }, []);
 

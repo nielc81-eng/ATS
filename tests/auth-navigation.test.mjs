@@ -81,6 +81,7 @@ test("navigation conformance: TA, deployment manager, and admin menus match the 
     "/candidate/profile",
     "/jobs",
     "/candidate/applications",
+    "/candidate/internal-mobility",
     "/candidate/documents",
     "/candidate/notifications",
   ]);
@@ -92,6 +93,7 @@ test("navigation conformance: TA, deployment manager, and admin menus match the 
     "/recruiter/applicants",
     "/recruiter/files",
     "/recruiter/screening",
+    "/recruiter/internal-mobility",
     "/recruiter/analytics",
     "/recruiter/talent-pool",
     "/recruiter/compliance-gate",
@@ -104,6 +106,7 @@ test("navigation conformance: TA, deployment manager, and admin menus match the 
     "/deployment-manager/requests",
     "/deployment-manager/assignments",
     "/deployment-manager/schedule",
+    "/deployment-manager/internal-mobility",
     "/deployment-manager/vault",
     "/deployment-manager/notifications",
   ]);
@@ -113,6 +116,7 @@ test("navigation conformance: TA, deployment manager, and admin menus match the 
     "/admin/dashboard",
     "/admin/users",
     "/admin/policies",
+    "/admin/internal-mobility",
     "/admin/audit",
     "/admin/reports",
     "/admin/system",

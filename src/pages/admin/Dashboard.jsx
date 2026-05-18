@@ -13,6 +13,7 @@ import { Users, ShieldAlert, Activity, Database, UsersRound, BarChart3, Server, 
 import { calculateAgeInDays } from "../../lib/analytics/metrics";
 import { motion } from 'framer-motion';
 import { staggerContainer, sectionFadeUp } from '../../lib/motionConfig';
+import { toCanonicalReportingStatus } from "../../lib/applicationTransitionGuard";
 
 function formatNumber(value) {
   return new Intl.NumberFormat().format(value);
@@ -33,10 +34,15 @@ export default function AdminDashboard() {
       Candidate: users.filter((user) => user.role === "Candidate" && user.status !== "Archived").length,
     };
 
+    const canonicalCounts = allApplications.reduce((acc, application) => {
+      const status = toCanonicalReportingStatus(application.status);
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
     const applicationDistribution = ["Submitted", "Shortlisted", "Interview", "Offer", "Hired", "Rejected"].map(
       (status) => ({
         status,
-        count: allApplications.filter((application) => application.status === status).length,
+        count: canonicalCounts[status] || 0,
       })
     );
 
@@ -49,7 +55,10 @@ export default function AdminDashboard() {
       pendingInbox: items.filter((item) => item.status === "Submitted").length,
       flaggedItems:
         files.filter((file) => file.status === "Needs Action").length +
-        allApplications.filter((application) => application.status === "Rejected").length,
+        allApplications.filter(
+          (application) =>
+            toCanonicalReportingStatus(application.status) === "Rejected"
+        ).length,
       applicationDistribution,
     };
   }, [allApplications, files, items, jobs, users]);

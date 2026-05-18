@@ -4,6 +4,7 @@ import {
   approveDeploymentRequest,
   ensureAdminWorkforceSeedData,
   getTalentWorkforceSnapshot,
+  upsertTalentFromHiredApplication,
 } from "../src/lib/adminWorkforceMockData.js";
 
 function createMockLocalStorage() {
@@ -84,3 +85,45 @@ test("approving a seeded Pending Approval request assigns and creates an active 
   }
 });
 
+test("upsertTalentFromHiredApplication is idempotent for repeated onboarding events", () => {
+  const previousWindow = globalThis.window;
+  const { localStorage } = createMockLocalStorage();
+
+  globalThis.window = { localStorage };
+  try {
+    ensureAdminWorkforceSeedData("Seeder");
+    const application = {
+      id: "APP-LIFECYCLE-100",
+      jobId: "JOB-OPS-01",
+      jobTitle: "Field Technician",
+      candidateName: "Lifecycle Candidate",
+      candidateEmail: "lifecycle.candidate@demo.com",
+    };
+
+    const first = upsertTalentFromHiredApplication(application, {
+      actor: "Recruiter A",
+      actorRole: "Recruiter",
+      department: "Operations",
+      personKey: "email:lifecycle.candidate@demo.com",
+    });
+    assert.equal(first.ok, true);
+    assert.equal(first.created, true);
+
+    const second = upsertTalentFromHiredApplication(application, {
+      actor: "Recruiter A",
+      actorRole: "Recruiter",
+      department: "Operations",
+      personKey: "email:lifecycle.candidate@demo.com",
+    });
+    assert.equal(second.ok, true);
+    assert.equal(second.created, false);
+
+    const snapshot = getTalentWorkforceSnapshot();
+    const matches = snapshot.pool.filter(
+      (record) => record.sourceApplicationId === "APP-LIFECYCLE-100"
+    );
+    assert.equal(matches.length, 1);
+  } finally {
+    globalThis.window = previousWindow;
+  }
+});
