@@ -114,6 +114,62 @@ export default function AdminInternalMobility() {
           </div>
         </section>
 
+        <section className="surface-card p-6">
+          <p className="section-heading">Final redeployment outcomes</p>
+          <h2 className="mt-2 text-lg font-semibold text-slate-950">Assigned vs. Declined</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Terminal-state records showing the ultimate recruiter decision for each candidate.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 text-emerald-600"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Assigned</p>
+                <p className="mt-1 text-3xl font-semibold text-emerald-900">
+                  {snapshot.redeploymentStatusCounts.Assigned ?? 0}
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-600">Successful redeployments</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 rounded-2xl border border-rose-200 bg-rose-50 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-100">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 text-rose-600"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-700">Declined</p>
+                <p className="mt-1 text-3xl font-semibold text-rose-900">
+                  {snapshot.redeploymentStatusCounts.Declined ?? 0}
+                </p>
+                <p className="mt-0.5 text-xs text-rose-600">Unsuccessful redeployments</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="surface-card overflow-hidden">
           <div className="border-b border-slate-100 px-6 py-4">
             <p className="section-heading">Immutable audit trail</p>

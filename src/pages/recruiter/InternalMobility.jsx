@@ -181,7 +181,9 @@ export default function RecruiterInternalMobility() {
     const queue = records.filter((row) => row.redeploymentStatus === "RequestSubmitted").length;
     const underReview = records.filter((row) => row.redeploymentStatus === "UnderReview").length;
     const matched = records.filter((row) => row.redeploymentStatus === "Matched").length;
-    return { queue, underReview, matched };
+    const assigned = records.filter((row) => row.redeploymentStatus === "Assigned").length;
+    const declined = records.filter((row) => row.redeploymentStatus === "Declined").length;
+    return { queue, underReview, matched, assigned, declined };
   }, [records]);
 
   const refreshRecords = () => setRecords(readInternalMobilityRecords());
@@ -295,7 +297,7 @@ export default function RecruiterInternalMobility() {
                   All statuses
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -337,6 +339,38 @@ export default function RecruiterInternalMobility() {
                 >
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Matched</p>
                   <p className="mt-1 text-xl font-semibold text-slate-900">{queueMetrics.matched}</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter("Assigned");
+                    setPage(1);
+                  }}
+                  className={[
+                    "rounded-xl border px-4 py-3 text-left transition",
+                    statusFilter === "Assigned"
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-slate-200 bg-white hover:border-emerald-300",
+                  ].join(" ")}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">Assigned</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{queueMetrics.assigned}</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter("Declined");
+                    setPage(1);
+                  }}
+                  className={[
+                    "rounded-xl border px-4 py-3 text-left transition",
+                    statusFilter === "Declined"
+                      ? "border-rose-400 bg-rose-50"
+                      : "border-slate-200 bg-white hover:border-rose-300",
+                  ].join(" ")}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-600">Declined</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{queueMetrics.declined}</p>
                 </button>
               </div>
             </div>
